@@ -11,4 +11,5 @@ require (
 	github.com/mxschmitt/golang-combinations v1.1.0
 	github.com/oschwald/geoip2-golang v1.8.0
 	github.com/refraction-networking/utls v1.1.2
+
 )

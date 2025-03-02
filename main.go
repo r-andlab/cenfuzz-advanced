@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"sync"
+	"fmt"
 
 	"github.com/censoredplanet/CenFuzz/config"
 	"github.com/censoredplanet/CenFuzz/util"
@@ -16,6 +17,9 @@ func WorkerType() worker.Worker {
 		return &worker.HTTPSWorker{}
 	case "http":
 		return &worker.HTTPWorker{}
+	case "quic":
+		fmt.Println("quic worker has been returned")
+		return &worker.QUICWorker{}
 	default:
 		panic("unknown protocol")
 	}
