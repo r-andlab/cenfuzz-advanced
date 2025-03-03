@@ -96,8 +96,8 @@ type HTTPFuzzerObject struct {
 	RequestWords []*http_fuzzer.RequestWord
 }
 
-//Using a separate struct to assign work instead of just the input,
-//since in the future we may want to assign different work for each vantage point
+// Using a separate struct to assign work instead of just the input,
+// since in the future we may want to assign different work for each vantage point
 type HTTPWork struct {
 	IP      string
 	Domain  string
@@ -148,7 +148,7 @@ func (h *HTTPWorker) GenerateTemplate(response interface{}, keyword string) inte
 	return filterBody(response.(string))
 }
 
-//TODO: there are more efficient ways of doing this than going through the list twice, but this will do for now
+// TODO: there are more efficient ways of doing this than going through the list twice, but this will do for now
 func (h *HTTPWorker) MatchesControl(results []*util.Result) []*util.Result {
 	var normalResponse interface{}
 	var normalError interface{}

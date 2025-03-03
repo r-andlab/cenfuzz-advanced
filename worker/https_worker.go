@@ -118,7 +118,7 @@ func (h *HTTPSWorker) GenerateTemplate(response interface{}, keyword string) int
 	return returnResponse
 }
 
-//TODO: there are more efficient ways of doing this than going through the list twice, but this will do for now
+// TODO: there are more efficient ways of doing this than going through the list twice, but this will do for now
 func (h *HTTPSWorker) MatchesControl(results []*util.Result) []*util.Result {
 	var normalResponse interface{}
 	var normalError interface{}

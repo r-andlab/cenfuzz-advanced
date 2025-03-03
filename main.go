@@ -16,6 +16,8 @@ func WorkerType() worker.Worker {
 		return &worker.HTTPSWorker{}
 	case "http":
 		return &worker.HTTPWorker{}
+	case "quic":
+		return &worker.QUICWorker{}
 	default:
 		panic("unknown protocol")
 	}
