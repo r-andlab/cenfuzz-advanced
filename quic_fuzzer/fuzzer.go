@@ -3,14 +3,15 @@ package quic_fuzzer
 import (
 	//"crypto/x509"
 	"log"
-	// "strconv"
-	// "strings"
+	"strconv"
+	"strings"
+	"fmt"
 
-	// "github.com/censoredplanet/CenFuzz/connection"
-	// "github.com/censoredplanet/CenFuzz/util"
+	"github.com/censoredplanet/CenFuzz/connection"
+	"github.com/censoredplanet/CenFuzz/util"
 	"github.com/google/go-cmp/cmp"
-	// tld "github.com/jpillora/go-tld"
-	// utls "github.com/refraction-networking/utls"
+	tld "github.com/jpillora/go-tld"
+	//utls "github.com/refraction-networking/utls"
 )
 
 type RequestWord struct {
