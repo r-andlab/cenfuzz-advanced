@@ -1,12 +1,12 @@
 package worker
 
 import (
-	// "fmt"
+	"fmt"
 	// "log"
 	// "sync"
 	// "time"
 
-	"quic_fuzzer"
+	"cenfuzz-advanced/quic_fuzzer"
 	// "github.com/censoredplanet/CenFuzz/util"
 )
 
@@ -15,7 +15,9 @@ type QUICWorker struct{}
 func (f FuzzerSpec) QuicFuzzerInterface() quic_fuzzer.Fuzzer {
 	switch f.Fuzzer() {
 	case 1:
-		return &http_fuzzer.HostnamePadding{}
+		// return &quic_fuzzer.HostnamePadding{}
+		fmt.Println("we are attempting to do the padding here")
+		return &quic_fuzzer.HostnamePadding{}
 	default:
 		panic("unknown fuzzer")
 	}

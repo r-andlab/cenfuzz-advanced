@@ -40,6 +40,6 @@ func (h *HostnamePadding) Init(all bool) []*RequestWord {
 	return requestWords
 }
 
-// func (h *HostnamePadding) Fuzz(target string, hostname string, requestWord RequestWord) (interface{}, interface{}, interface{}) {
-// 	return MakeConnection(target, hostname, requestWord)
-// }
+func (h *HostnamePadding) Fuzz(target string, hostname string, requestWord RequestWord) (interface{}, interface{}, interface{}) {
+	return MakeConnection(target, hostname, requestWord)
+}
