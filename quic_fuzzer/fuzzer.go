@@ -17,9 +17,9 @@ import (
 type RequestWord struct {
 	Hostname          string
 	GetWord           string `default:"GET"`
-	HttpWord          string `default:"HTTP/1.1"`
+	QUICWord          string `default:"HTTP/1.1"`
 	HostWord          string `default:"Host:"`
-	HttpDelimiterWord string `default:"\r\n"`
+	QUICDelimiterWord string `default:"\r\n"`
 	Path              string `default:"/"`
 	Header            string `default:""`
 }
@@ -40,16 +40,16 @@ func FormatHttpRequest(requestWord RequestWord) string {
 		getWord = requestWord.GetWord
 	}
 	httpWord := "HTTP/1.1"
-	if requestWord.HttpWord != "" {
-		httpWord = requestWord.HttpWord
+	if requestWord.QUICWord != "" {
+		httpWord = requestWord.QUICWord
 	}
 	hostWord := "Host:"
 	if requestWord.HostWord != "" {
 		hostWord = requestWord.HostWord
 	}
 	httpDelimiterWord := "\r\n"
-	if requestWord.HttpDelimiterWord != "" {
-		httpDelimiterWord = requestWord.HttpDelimiterWord
+	if requestWord.QUICDelimiterWord != "" {
+		httpDelimiterWord = requestWord.QUICDelimiterWord
 	}
 	path := " / "
 	if requestWord.Path != "" {

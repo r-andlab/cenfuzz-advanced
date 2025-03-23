@@ -28,7 +28,7 @@ func WorkerType() worker.Worker {
 
 func main() {
 	w := WorkerType()
-	log.Printf("Starting HTTP(S) fuzzers")
+	log.Printf("Starting fuzzers")
 	inputs := util.ParseInfile(config.Infile)
 	uncensoredKeyword := config.UncensoredKeyword
 	outfile := config.Outfile

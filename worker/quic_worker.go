@@ -12,6 +12,69 @@ import (
 
 type QUICWorker struct{}
 
+func (f FuzzerSpec) QUICFuzzerInterface() quic_fuzzer.Fuzzer {
+	switch f.Fuzzer() {
+	case 1:
+		return &quic_fuzzer.HostnamePadding{}
+	default:
+		panic("unknown fuzzer")
+	}
+}
+
+func QUICFuzzerMapping(fuzzer int) string {
+	switch fuzzer {
+	case 1:
+		return "Hostname Padding"
+	case 2:
+		return "Get Word | Capitalize"
+	case 3:
+		return "Get Word | Remove"
+	case 4:
+		return "Get Word | Alternate"
+	case 5:
+		return "Http Word | Capitalize"
+	case 6:
+		return "Http Word | Remove"
+	case 7:
+		return "Http Word | Alternate"
+	case 8:
+		return "Host Word | Capitalize"
+	case 9:
+		return "Host Word | Remove"
+	case 10:
+		return "Host Word | Alternate"
+	case 11:
+		return "Http Delimiter | Remove"
+	case 12:
+		return "Path | Alternate"
+	case 13:
+		return "Header | Alternate"
+	case 14:
+		return "Hostname Alternate"
+	case 15:
+		return "Hostname TLD Alternate"
+	case 16:
+		return "Hostname Subdomain Alternate"
+	default:
+		return "NA"
+	}
+}
+
+
+type QUICFuzzerObject struct {
+	TestName     string
+	Spec         FuzzerSpec
+	RequestWords []*quic_fuzzer.RequestWord
+}
+
+//Using a separate struct to assign work instead of just the input,
+//since in the future we may want to assign different work for each vantage point
+type QUICWork struct {
+	IP      string
+	Domain  string
+	Fuzzers []*QUICFuzzerObject
+}
+
 func (f FuzzerSpec) QuicFuzzerInterface() quic_fuzzer.Fuzzer {
 	switch f.Fuzzer() {
 	case 1:
@@ -24,18 +87,18 @@ func (f FuzzerSpec) QuicFuzzerInterface() quic_fuzzer.Fuzzer {
 }
 
 func (h *QUICWorker) FuzzerObjects(fuzzerList []*util.FuzzerInput) interface{} {
-	var fuzzerObjects []*HTTPFuzzerObject
+	var fuzzerObjects []*QUICFuzzerObject
 	for _, fuzzerStruct := range fuzzerList {
 
 		fuzzerspec := FuzzerSpec(fuzzerStruct.FuzzerNumber)
-		fuzzerName := HTTPFuzzerMapping(fuzzerStruct.FuzzerNumber)
+		fuzzerName := QUICFuzzerMapping(fuzzerStruct.FuzzerNumber)
 		if fuzzerName == "NA" {
-			log.Println("[HTTPWorker.FuzzerObjects] WARNING: Fuzzer not available: ", fuzzerStruct.FuzzerNumber)
+			log.Println("[QUICWorker.FuzzerObjects] WARNING: Fuzzer not available: ", fuzzerStruct.FuzzerNumber)
 			continue
 		}
-		requestWords := fuzzerspec.HTTPFuzzerInterface().Init(fuzzerStruct.All)
+		requestWords := fuzzerspec.QUICFuzzerInterface().Init(fuzzerStruct.All)
 
-		fuzzerObjects = append(fuzzerObjects, &HTTPFuzzerObject{
+		fuzzerObjects = append(fuzzerObjects, &QUICFuzzerObject{
 			TestName:     fuzzerName,
 			Spec:         fuzzerspec,
 			RequestWords: requestWords,
@@ -124,24 +187,19 @@ func (h *QUICWorker) SendResults(results []*util.Result, ResultsQueue chan<- *ut
 
 }
 
-type QUICWork struct {
-	IP      string
-	Domain  string
-	Fuzzers []*HTTPFuzzerObject
-}
 
 func (h *QUICWorker) Work(ip string, domain string, fuzzers interface{}) interface{} {
 	return &QUICWork{
 		IP:      ip,
 		Domain:  domain,
-		Fuzzers: fuzzers.([]*HTTPFuzzerObject),
+		Fuzzers: fuzzers.([]*QUICFuzzerObject),
 	}
 }
 
 
 func (h *QUICWorker) Worker(workQueue <-chan interface{}, resultQueue chan<- *util.Result, uncensoredDomain string, wg *sync.WaitGroup, done chan<- bool) {
 	for w := range workQueue {
-		work := w.(*HTTPWork)
+		work := w.(*QUICWork)
 		var results []*util.Result
 
 		//Uncensored Normal
@@ -187,9 +245,9 @@ func (h *QUICWorker) Worker(workQueue <-chan interface{}, resultQueue chan<- *ut
 				uncensoredRequest, uncensoredResponse, uncensoredErr := fuzzerObject.Spec.QuicFuzzerInterface().Fuzz(work.IP, work.Domain, quic_fuzzer.RequestWord{
 					Hostname:          formattedUncensoredDomain,
 					GetWord:           requestWord.GetWord,
-					HttpWord:          requestWord.HttpWord,
+					QUICWord:          requestWord.QUICWord,
 					HostWord:          requestWord.HostWord,
-					HttpDelimiterWord: requestWord.HttpDelimiterWord,
+					QUICDelimiterWord: requestWord.QUICDelimiterWord,
 					Path:              requestWord.Path,
 					Header:            requestWord.Header,
 				})
@@ -198,9 +256,9 @@ func (h *QUICWorker) Worker(workQueue <-chan interface{}, resultQueue chan<- *ut
 				censoredRequest, censoredResponse, censoredErr := fuzzerObject.Spec.QuicFuzzerInterface().Fuzz(work.IP, work.Domain, quic_fuzzer.RequestWord{
 					Hostname:          formattedCensoredDomain,
 					GetWord:           requestWord.GetWord,
-					HttpWord:          requestWord.HttpWord,
+					QUICWord:          requestWord.QUICWord,
 					HostWord:          requestWord.HostWord,
-					HttpDelimiterWord: requestWord.HttpDelimiterWord,
+					QUICDelimiterWord: requestWord.QUICDelimiterWord,
 					Path:              requestWord.Path,
 					Header:            requestWord.Header,
 				})
