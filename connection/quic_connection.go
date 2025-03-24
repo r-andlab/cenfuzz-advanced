@@ -4,7 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"io"
+	//"io"
 	"log"
 	//"time"
 
@@ -18,7 +18,7 @@ type QUICConnection struct {
 	Err  error
 }
 
-// NewQUICConnection establishes a new QUIC connection
+// NewQUICConnection establishes a new QUIC connection and ensures handshake completion
 func NewQUICConnection(host string, port uint) *QUICConnection {
 	conn := &QUICConnection{
 		Host: fmt.Sprintf("%s:%d", host, port),
@@ -39,6 +39,18 @@ func NewQUICConnection(host string, port uint) *QUICConnection {
 		log.Println("Error dialing QUIC:", err)
 		return nil
 	}
+
+	// Ensure the handshake completes
+	stream, err := session.OpenStreamSync(ctx)
+	if err != nil {
+		conn.Err = err
+		log.Println("Error completing QUIC handshake:", err)
+		return nil
+	}
+	stream.Close()
+
+	log.Println("QUIC handshake successful with", conn.Host)
+
 	conn.Raw = session
 	return conn
 }
@@ -66,11 +78,11 @@ func SendHTTP3Request(conn *QUICConnection, request string) interface{} {
 	// Read response
 	response := make([]byte, 1<<16)
 	n, err := stream.Read(response)
-	if err != nil && err != io.EOF {
-		log.Println("Error reading QUIC response:", err)
-		conn.Err = err
-		return nil
-	}
+	// if err != nil && err != io.EOF {
+	// 	log.Println("Error reading QUIC response:", err)
+	// 	conn.Err = err
+	// 	return nil
+	// }
 
 	return string(response[:n])
 }

@@ -108,12 +108,12 @@ func FormatHttpRequest(requestWord RequestWord) string {
 func MakeConnectionQuic(target string, hostname string, requestWord RequestWord) (interface{}, interface{}, interface{}) {
 	formattedHostname := FormatHttpRequest(requestWord)
 
-	conn := connection.NewConnection(target, 80)
+	conn := connection.NewQUICConnection(target, 443)
 	if conn == nil {
 		return formattedHostname, nil, "Dial"
 	}
 
-	response := connection.SendHTTPRequest(conn, formattedHostname)
+	response := connection.SendHTTP3Request(conn, formattedHostname)
 	if conn.Err != nil {
 		return formattedHostname, nil, conn.Err.Error()
 	}
