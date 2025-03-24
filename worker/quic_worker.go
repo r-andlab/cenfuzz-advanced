@@ -25,36 +25,6 @@ func QUICFuzzerMapping(fuzzer int) string {
 	switch fuzzer {
 	case 1:
 		return "Hostname Padding"
-	case 2:
-		return "Get Word | Capitalize"
-	case 3:
-		return "Get Word | Remove"
-	case 4:
-		return "Get Word | Alternate"
-	case 5:
-		return "Http Word | Capitalize"
-	case 6:
-		return "Http Word | Remove"
-	case 7:
-		return "Http Word | Alternate"
-	case 8:
-		return "Host Word | Capitalize"
-	case 9:
-		return "Host Word | Remove"
-	case 10:
-		return "Host Word | Alternate"
-	case 11:
-		return "Http Delimiter | Remove"
-	case 12:
-		return "Path | Alternate"
-	case 13:
-		return "Header | Alternate"
-	case 14:
-		return "Hostname Alternate"
-	case 15:
-		return "Hostname TLD Alternate"
-	case 16:
-		return "Hostname Subdomain Alternate"
 	default:
 		return "NA"
 	}
