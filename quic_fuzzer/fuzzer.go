@@ -12,16 +12,19 @@ import (
 	"github.com/google/go-cmp/cmp"
 	tld "github.com/jpillora/go-tld"
 	//utls "github.com/refraction-networking/utls"
+	// this packet is need for quic connections to the server
+	//"github.com/quic-go/quic-go"
 )
 
 type RequestWord struct {
 	Hostname          string
 	GetWord           string `default:"GET"`
-	QUICWord          string `default:"HTTP/1.1"`
+	QUICWord          string `default:"HTTP/3.3"`
 	HostWord          string `default:"Host:"`
 	QUICDelimiterWord string `default:"\r\n"`
 	Path              string `default:"/"`
 	Header            string `default:""`
+	ALPN              string `default:"h3"`
 }
 
 func containsRequestWord(s []*RequestWord, e *RequestWord) bool {
@@ -39,7 +42,7 @@ func FormatHttpRequest(requestWord RequestWord) string {
 	if requestWord.GetWord != "" {
 		getWord = requestWord.GetWord
 	}
-	httpWord := "HTTP/1.1"
+	httpWord := "HTTP/3"
 	if requestWord.QUICWord != "" {
 		httpWord = requestWord.QUICWord
 	}
@@ -102,8 +105,9 @@ func FormatHttpRequest(requestWord RequestWord) string {
 	return fmt.Sprintf(format, getWord, path, httpWord, httpDelimiterWord, hostWord, host, header)
 }
 
-func MakeConnection(target string, hostname string, requestWord RequestWord) (interface{}, interface{}, interface{}) {
+func MakeConnectionQuic(target string, hostname string, requestWord RequestWord) (interface{}, interface{}, interface{}) {
 	formattedHostname := FormatHttpRequest(requestWord)
+
 	conn := connection.NewConnection(target, 80)
 	if conn == nil {
 		return formattedHostname, nil, "Dial"
