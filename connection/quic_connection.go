@@ -6,97 +6,71 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"time"
+	//"time"
 
-	"github.com/lucas-clemente/quic-go"
+	quic "github.com/quic-go/quic-go"
 )
 
-// Connection struct now supports QUIC
-type Connection struct {
+// QUICConnection struct for handling QUIC connections
+type QUICConnection struct {
 	Host string
 	Raw  quic.Connection
 	Err  error
 }
 
-// Establish a new QUIC connection
-func NewConnection(host string, port uint) *Connection {
-	conn := &Connection{
-		Host: host,
+// NewQUICConnection establishes a new QUIC connection
+func NewQUICConnection(host string, port uint) *QUICConnection {
+	conn := &QUICConnection{
+		Host: fmt.Sprintf("%s:%d", host, port),
 	}
 
-	raw, err := Dial(host, port)
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: true,
+		NextProtos:         []string{"h3"},
+	}
+
+	quicConfig := &quic.Config{}
+
+	// Use context for QUIC connection
+	ctx := context.Background()
+	session, err := quic.DialAddr(ctx, conn.Host, tlsConfig, quicConfig)
 	if err != nil {
-		conn.handleError(err)
+		conn.Err = err
+		log.Println("Error dialing QUIC:", err)
 		return nil
 	}
-	conn.Raw = raw
-
+	conn.Raw = session
 	return conn
 }
 
-// Dial a QUIC connection instead of TCP
-func Dial(host string, port uint) (quic.Connection, error) {
-	tlsConf := &tls.Config{
-		InsecureSkipVerify: true, // Disable verification for testing purposes
-		NextProtos:         []string{"h3"}, // HTTP/3 ALPN
-	}
+// SendHTTPRequest sends an HTTP/3 request over QUIC
+func SendHTTP3Request(conn *QUICConnection, request string) interface{} {
+	defer conn.Raw.CloseWithError(0, "Closing connection")
 
-	quicConf := &quic.Config{}
-
-	session, err := quic.DialAddr(fmt.Sprintf("%s:%d", host, port), tlsConf, quicConf)
-	if err != nil {
-		return nil, err
-	}
-
-	return session, nil
-}
-
-// Send an HTTP/3 request over QUIC
-func SendHTTPRequest(conn *Connection, request string) interface{} {
-	defer conn.Raw.CloseWithError(0, "Closing QUIC connection")
-
-	// Open a new QUIC stream
 	stream, err := conn.Raw.OpenStreamSync(context.Background())
 	if err != nil {
-		conn.handleError(err)
+		log.Println("Error opening QUIC stream:", err)
+		conn.Err = err
 		return nil
 	}
 	defer stream.Close()
 
-	// Send HTTP/3 request
-	sent := []byte(request)
-	if _, err := stream.Write(sent); err != nil {
-		conn.handleError(err)
+	// Send request
+	_, err = stream.Write([]byte(request))
+	if err != nil {
+		log.Println("Error writing to QUIC stream:", err)
+		conn.Err = err
 		return nil
 	}
 
-	// Read response from QUIC stream
-	maxResponseLength := 1 << 16
-	response := make([]byte, maxResponseLength)
-
-	responseLength := 0
-	for {
-		stream.SetReadDeadline(time.Now().Add(10 * time.Second))
-		n, err := stream.Read(response[responseLength:maxResponseLength])
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			conn.handleError(err)
-			break
-		}
-		responseLength += n
-	}
-
-	return string(response[:responseLength])
-}
-
-// Handle connection errors
-func (conn *Connection) handleError(err error) error {
-	if err != nil {
+	// Read response
+	response := make([]byte, 1<<16)
+	n, err := stream.Read(response)
+	if err != nil && err != io.EOF {
+		log.Println("Error reading QUIC response:", err)
 		conn.Err = err
-		if conn.Raw != nil {
-			conn.Raw.CloseWithError(0, "Error occurred")
-		}
+		return nil
 	}
-	return err
+
+	return string(response[:n])
 }
