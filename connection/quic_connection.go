@@ -4,7 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	//"io"
+	"io"
 	"log"
 	//"time"
 
@@ -68,6 +68,7 @@ func SendHTTP3Request(conn *QUICConnection, request string) interface{} {
 	defer stream.Close()
 
 	// Send request
+	log.Println("request is ", request)
 	_, err = stream.Write([]byte(request))
 	if err != nil {
 		log.Println("Error writing to QUIC stream:", err)
@@ -78,11 +79,12 @@ func SendHTTP3Request(conn *QUICConnection, request string) interface{} {
 	// Read response
 	response := make([]byte, 1<<16)
 	n, err := stream.Read(response)
-	// if err != nil && err != io.EOF {
-	// 	log.Println("Error reading QUIC response:", err)
-	// 	conn.Err = err
-	// 	return nil
-	// }
+	log.Println("n = ", n)
+	if err != nil && err != io.EOF {
+		log.Println("Error reading QUIC response:", err)
+		conn.Err = err
+		return nil
+	}
 
 	return string(response[:n])
 }
