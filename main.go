@@ -16,8 +16,8 @@ func WorkerType() worker.Worker {
 		return &worker.HTTPSWorker{}
 	case "http":
 		return &worker.HTTPWorker{}
-	case "quic":
-		return &worker.QUICWorker{}
+	case "ech":
+		return &worker.ECHWorker{}
 	default:
 		panic("unknown protocol")
 	}
@@ -25,6 +25,7 @@ func WorkerType() worker.Worker {
 }
 
 func main() {
+	log.Printf(config.Protocol)
 	w := WorkerType()
 	log.Printf("Starting HTTP(S) fuzzers")
 	inputs := util.ParseInfile(config.Infile)

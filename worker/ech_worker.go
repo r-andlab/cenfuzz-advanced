@@ -6,13 +6,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/censoredplanet/CenFuzz/quic_fuzzer"
-
+	"github.com/censoredplanet/CenFuzz/ech_fuzzer"
 	"github.com/censoredplanet/CenFuzz/util"
 	"github.com/google/go-cmp/cmp"
 )
 
-func QUICFuzzerMapping(fuzzer int) string {
+type ECHWorker struct{}
+
+func ECHFuzzerMapping(fuzzer int) string {
 	switch fuzzer {
 	case 1:
 		return "SNI Padding"
@@ -35,64 +36,62 @@ func QUICFuzzerMapping(fuzzer int) string {
 	}
 }
 
-type QUICWorker struct{}
-
-func (f FuzzerSpec) QUICFuzzerInterface() quic_fuzzer.Fuzzer {
+func (f FuzzerSpec) ECHFuzzerInterface() ech_fuzzer.Fuzzer {
 	switch f.Fuzzer() {
 	case 1:
-		return &quic_fuzzer.ServernamePadding{}
+		return &ech_fuzzer.ServernamePadding{}
 	case 2:
-		return &quic_fuzzer.MinVersionAlternate{}
+		return &ech_fuzzer.MinVersionAlternate{}
 	case 3:
-		return &quic_fuzzer.MaxversionAlternate{}
+		return &ech_fuzzer.MaxversionAlternate{}
 	case 4:
-		return &quic_fuzzer.CipherSuiteAlternate{}
+		return &ech_fuzzer.CipherSuiteAlternate{}
 	case 5:
-		return &quic_fuzzer.ClientCertAlternate{}
+		return &ech_fuzzer.ClientCertAlternate{}
 	case 6:
-		return &quic_fuzzer.ServernameAlternate{}
+		return &ech_fuzzer.ServernameAlternate{}
 	case 7:
-		return &quic_fuzzer.ServernameTLDAlternate{}
+		return &ech_fuzzer.ServernameTLDAlternate{}
 	case 8:
-		return &quic_fuzzer.ServernameSubdomainsAlternate{}
+		return &ech_fuzzer.ServernameSubdomainsAlternate{}
 	default:
 		panic("unknown fuzzer")
 	}
 }
 
-type QUICFuzzerObject struct {
+type ECHFuzzerObject struct {
 	TestName     string
 	Spec         FuzzerSpec
-	RequestWords []*quic_fuzzer.RequestWord
+	RequestWords []*ech_fuzzer.RequestWord
 }
 
-type QUICWork struct {
+type ECHWork struct {
 	IP      string
 	Domain  string
-	Fuzzers []*QUICFuzzerObject
+	Fuzzers []*ECHFuzzerObject
 }
 
-func (h *QUICWorker) Work(ip string, domain string, fuzzers interface{}) interface{} {
-	return &QUICWork{
+func (h *ECHWorker) Work(ip string, domain string, fuzzers interface{}) interface{} {
+	return &ECHWork{
 		IP:      ip,
 		Domain:  domain,
-		Fuzzers: fuzzers.([]*QUICFuzzerObject),
+		Fuzzers: fuzzers.([]*ECHFuzzerObject),
 	}
 }
 
-func (h *QUICWorker) FuzzerObjects(fuzzerList []*util.FuzzerInput) interface{} {
-	var fuzzerObjects []*QUICFuzzerObject
+func (h *ECHWorker) FuzzerObjects(fuzzerList []*util.FuzzerInput) interface{} {
+	var fuzzerObjects []*ECHFuzzerObject
 	for _, fuzzerStruct := range fuzzerList {
 
 		fuzzerspec := FuzzerSpec(fuzzerStruct.FuzzerNumber)
-		fuzzerName := QUICFuzzerMapping(fuzzerStruct.FuzzerNumber)
+		fuzzerName := ECHFuzzerMapping(fuzzerStruct.FuzzerNumber)
 		if fuzzerName == "NA" {
-			log.Println("[QUICWorker.FuzzerObjects] WARNING: Fuzzer not available: ", fuzzerStruct.FuzzerNumber)
+			log.Println("[ECHWorker.FuzzerObjects] WARNING: Fuzzer not available: ", fuzzerStruct.FuzzerNumber)
 			continue
 		}
-		requestWords := fuzzerspec.QUICFuzzerInterface().Init(fuzzerStruct.All)
+		requestWords := fuzzerspec.ECHFuzzerInterface().Init(fuzzerStruct.All)
 
-		fuzzerObjects = append(fuzzerObjects, &QUICFuzzerObject{
+		fuzzerObjects = append(fuzzerObjects, &ECHFuzzerObject{
 			TestName:     fuzzerName,
 			Spec:         fuzzerspec,
 			RequestWords: requestWords,
@@ -102,7 +101,7 @@ func (h *QUICWorker) FuzzerObjects(fuzzerList []*util.FuzzerInput) interface{} {
 
 }
 
-func (h *QUICWorker) GenerateTemplate(response interface{}, keyword string) interface{} {
+func (h *ECHWorker) GenerateTemplate(response interface{}, keyword string) interface{} {
 	if response == nil {
 		return nil
 	}
@@ -120,7 +119,7 @@ func (h *QUICWorker) GenerateTemplate(response interface{}, keyword string) inte
 }
 
 // TODO: there are more efficient ways of doing this than going through the list twice, but this will do for now
-func (h *QUICWorker) MatchesControl(results []*util.Result) []*util.Result {
+func (h *ECHWorker) MatchesControl(results []*util.Result) []*util.Result {
 	var normalResponse interface{}
 	var normalError interface{}
 
@@ -222,7 +221,7 @@ func (h *QUICWorker) MatchesControl(results []*util.Result) []*util.Result {
 	return results
 }
 
-func (h *QUICWorker) SendResults(results []*util.Result, ResultsQueue chan<- *util.Result) {
+func (h *ECHWorker) SendResults(results []*util.Result, ResultsQueue chan<- *util.Result) {
 	annotatedResults := h.MatchesControl(results)
 	for _, result := range annotatedResults {
 		ResultsQueue <- result
@@ -230,17 +229,17 @@ func (h *QUICWorker) SendResults(results []*util.Result, ResultsQueue chan<- *ut
 
 }
 
-func (h *QUICWorker) Worker(workQueue <-chan interface{}, resultQueue chan<- *util.Result, uncensoredDomain string, wg *sync.WaitGroup, done chan<- bool) {
+func (h *ECHWorker) Worker(workQueue <-chan interface{}, resultQueue chan<- *util.Result, uncensoredDomain string, wg *sync.WaitGroup, done chan<- bool) {
 	for w := range workQueue {
-		work := w.(*QUICWork)
+		work := w.(*ECHWork)
 		var results []*util.Result
 
 		//Uncensored Normal
 		startTime := time.Now()
-		uncensoredRequest, uncensoredResponse, uncensoredError := quic_fuzzer.MakeConnection(work.IP, uncensoredDomain, quic_fuzzer.RequestWord{Servername: uncensoredDomain})
+		uncensoredRequest, uncensoredResponse, uncensoredError := ech_fuzzer.MakeConnection(work.IP, uncensoredDomain, ech_fuzzer.RequestWord{Servername: uncensoredDomain})
 		time.Sleep(util.Sleep(uncensoredError))
 		//Censored Normal
-		censoredRequest, censoredResponse, censoredError := quic_fuzzer.MakeConnection(work.IP, work.Domain, quic_fuzzer.RequestWord{Servername: work.Domain})
+		censoredRequest, censoredResponse, censoredError := ech_fuzzer.MakeConnection(work.IP, work.Domain, ech_fuzzer.RequestWord{Servername: work.Domain})
 		time.Sleep(util.Sleep(censoredError))
 		endTime := time.Now()
 		//Add normal results
@@ -273,7 +272,7 @@ func (h *QUICWorker) Worker(workQueue <-chan interface{}, resultQueue chan<- *ut
 				censoredRequestWord := requestWord.Servername
 				formattedUncensoredDomain := fmt.Sprintf(uncensoredRequestWord, uncensoredDomain)
 				startTime = time.Now()
-				uncensoredRequest, uncensoredResponse, uncensoredErr := fuzzerObject.Spec.QUICFuzzerInterface().Fuzz(work.IP, work.Domain, quic_fuzzer.RequestWord{
+				uncensoredRequest, uncensoredResponse, uncensoredErr := fuzzerObject.Spec.ECHFuzzerInterface().Fuzz(work.IP, work.Domain, ech_fuzzer.RequestWord{
 					Servername:   formattedUncensoredDomain,
 					MinVersion:   requestWord.MinVersion,
 					MaxVersion:   requestWord.MaxVersion,
@@ -282,7 +281,7 @@ func (h *QUICWorker) Worker(workQueue <-chan interface{}, resultQueue chan<- *ut
 				})
 				time.Sleep(util.Sleep(uncensoredErr))
 				formattedCensoredDomain := fmt.Sprintf(censoredRequestWord, work.Domain)
-				censoredRequest, censoredResponse, censoredErr := fuzzerObject.Spec.QUICFuzzerInterface().Fuzz(work.IP, work.Domain, quic_fuzzer.RequestWord{
+				censoredRequest, censoredResponse, censoredErr := fuzzerObject.Spec.ECHFuzzerInterface().Fuzz(work.IP, work.Domain, ech_fuzzer.RequestWord{
 					Servername:   formattedCensoredDomain,
 					MinVersion:   requestWord.MinVersion,
 					MaxVersion:   requestWord.MaxVersion,
