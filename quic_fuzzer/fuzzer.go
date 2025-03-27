@@ -6,6 +6,7 @@ import (
 	//"strconv"
 	//"strings"
 	"fmt"
+	"log"
 
 	"github.com/censoredplanet/CenFuzz/connection"
 	//"github.com/censoredplanet/CenFuzz/util"
@@ -71,6 +72,7 @@ func FormatHttpRequest(requestWord RequestWord) string {
 	return request
 }
 func MakeConnectionQuic(target string, hostname string, requestWord RequestWord) (interface{}, interface{}, interface{}) {
+	log.Println("request word is ", requestWord)
 	formattedHostname := FormatHttpRequest(requestWord)
 
 	conn := connection.NewQUICConnection(target, 443)
