@@ -18,6 +18,7 @@ type QUICConnection struct {
 	Host string
 	Raw  quic.Connection
 	Err  error
+	Udpport net.Conn
 }
 
 // NewQUICConnection establishes a new QUIC connection and ensures handshake completion
@@ -73,7 +74,7 @@ func NewQUICConnection(host string, port uint) *QUICConnection {
 
 
 	// returning the quic_conn
-	return &QUICConnection{Host: host, Raw: quic_conn, Err: nil}
+	return &QUICConnection{Host: host, Raw: quic_conn, Err: nil, Udpport: conn}
 
 	
 
@@ -118,5 +119,6 @@ func SendHTTP3Request(conn *QUICConnection, request string) interface{} {
 	fmt.Println("Response from server:", string(buf[:n]))
 	defer stream.Close()
 
+	defer conn.Udpport.Close()
 	return buf[:n]
 }
