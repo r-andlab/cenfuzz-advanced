@@ -6,7 +6,8 @@ import (
 	"fmt"
 	"io"
 	"log"
-	//"time"
+	"net"
+	"time"
 
 	quic "github.com/quic-go/quic-go"
 	
@@ -21,39 +22,63 @@ type QUICConnection struct {
 
 // NewQUICConnection establishes a new QUIC connection and ensures handshake completion
 func NewQUICConnection(host string, port uint) *QUICConnection {
-	conn := &QUICConnection{
-		Host: fmt.Sprintf("%s:%d", host, port),
+	// TO DO: change from returning nil to raising an error 
+
+	// TO DO: stop hard coding of the port
+	host = host + ":4433"
+
+	// getting the server addr with udp 
+	server_addr, err := net.ResolveUDPAddr("udp", host)
+	if err != nil {
+		fmt.Println("Error resolving domain:", err)
+		return nil
 	}
 
+	// getting my own address
+	addr, err := net.ResolveUDPAddr("udp", "0.0.0.0:6121")
+	if err != nil {
+		fmt.Println("Problem setting up udp address", err)
+		return nil
+	}
+
+	// setting up a udp port on my own device
+	conn, err := net.ListenUDP("udp", addr)
+	if err != nil {
+		fmt.Println("Problem setting up udp port", err)
+		return nil
+	}
+
+	// my tls confid
 	tlsConfig := &tls.Config{
-		InsecureSkipVerify: true,
-		NextProtos:         []string{"h3"},
+		// TO DO: don't skip the verification in production
+		InsecureSkipVerify: true,             // For testing purposes; skip verification
+		MinVersion:         tls.VersionTLS13, 
+		NextProtos:         []string{"h3"},   
 	}
 
-	quicConfig := &quic.Config{}
+	// Create a QUIC configuration
+	quicConfig := &quic.Config{
+		MaxIdleTimeout: 10 * time.Second,
+		MaxIncomingStreams: 1000,
+	}
 
-	// Use context for QUIC connection
-	ctx := context.Background()
-	session, err := quic.DialAddr(ctx, conn.Host, tlsConfig, quicConfig)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second) // 3s handshake timeout
+	defer cancel()
+	quic_conn, err := quic.Dial(ctx, conn, server_addr, tlsConfig, quicConfig)
 	if err != nil {
-		conn.Err = err
-		log.Println("Error dialing QUIC:", err)
+		fmt.Println("Error in creating connection", err)
+
 		return nil
 	}
 
-	// Ensure the handshake completes
-	stream, err := session.OpenStreamSync(ctx)
-	if err != nil {
-		conn.Err = err
-		log.Println("Error completing QUIC handshake:", err)
-		return nil
-	}
-	stream.Close()
 
-	log.Println("QUIC handshake successful with", conn.Host)
+	// returning the quic_conn
+	return &QUICConnection{Host: host, Raw: quic_conn, Err: nil}
 
-	conn.Raw = session
-	return conn
+	
+
+
+
 }
 
 // SendHTTPRequest sends an HTTP/3 request over QUIC
@@ -68,24 +93,30 @@ func SendHTTP3Request(conn *QUICConnection, request string) interface{} {
 	}
 	defer stream.Close()
 
+
 	// Send request
-	log.Println("request is ", request)
-	_, err = stream.Write([]byte(request))
+	temp_request := "GET /index.html HTTP/3.0\r\n" +
+		":method: GET\r\n" +
+		":path: /index.html\r\n" +
+		":authority: quic.tech\r\n" +
+		"User-Agent: quic-go-client\r\n" +
+		"\r\n"
+
+	_, err = stream.Write([]byte(temp_request))
 	if err != nil {
-		log.Println("Error writing to QUIC stream:", err)
-		conn.Err = err
+		fmt.Println("Error sending request:", err)
 		return nil
 	}
 
 	// Read response
-	response := make([]byte, 1<<16)
-	n, err := stream.Read(response)
-	log.Println("n = ", n)
+	buf := make([]byte, 1024)
+	n, err := stream.Read(buf)
 	if err != nil && err != io.EOF {
-		log.Println("Error reading QUIC response:", err)
-		conn.Err = err
+		fmt.Println("Error reading response:", err)
 		return nil
 	}
 
-	return string(response[:n])
+	fmt.Println("Response from server:", string(buf[:n]))
+
+	return buf[:n]
 }
