@@ -35,7 +35,7 @@ func NewQUICConnection(host string, port uint) *QUICConnection {
 	}
 
 	// getting my own address
-	addr, err := net.ResolveUDPAddr("udp", "0.0.0.0:6121")
+	addr, err := net.ResolveUDPAddr("udp", "0.0.0.0:0")
 	if err != nil {
 		fmt.Println("Problem setting up udp address", err)
 		return nil
@@ -91,8 +91,7 @@ func SendHTTP3Request(conn *QUICConnection, request string) interface{} {
 		conn.Err = err
 		return nil
 	}
-	defer stream.Close()
-
+	
 
 	// Send request
 	temp_request := "GET /index.html HTTP/3.0\r\n" +
@@ -117,6 +116,7 @@ func SendHTTP3Request(conn *QUICConnection, request string) interface{} {
 	}
 
 	fmt.Println("Response from server:", string(buf[:n]))
+	defer stream.Close()
 
 	return buf[:n]
 }
