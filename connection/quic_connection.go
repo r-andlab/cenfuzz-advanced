@@ -26,7 +26,7 @@ func NewQUICConnection(host string, port uint) *QUICConnection {
 	// TO DO: change from returning nil to raising an error 
 
 	// TO DO: stop hard coding of the port
-	host = host + ":4433"
+	host = host + ":443"
 
 	// getting the server addr with udp 
 	server_addr, err := net.ResolveUDPAddr("udp", host)
