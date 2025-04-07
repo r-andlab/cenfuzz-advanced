@@ -8,6 +8,9 @@ import (
 	"log"
 	"net"
 	"time"
+	"bytes"
+	"github.com/quic-go/quic-go/quicvarint"  // for quicvarint.Write
+
 
 	quic "github.com/quic-go/quic-go"
 	
@@ -94,31 +97,62 @@ func SendHTTP3Request(conn *QUICConnection, request string) interface{} {
 	}
 	
 
-	// Send request
-	temp_request := "GET /index.html HTTP/3.0\r\n" +
-		":method: GET\r\n" +
-		":path: /index.html\r\n" +
-		":authority: quic.tech\r\n" +
-		"User-Agent: quic-go-client\r\n" +
-		"\r\n"
+	// Create a buffer to send raw HTTP/3 frames
+	buf := &bytes.Buffer{}
 
-	_, err = stream.Write([]byte(temp_request))
+	// Send SETTINGS frame first (with 0x04 as the frame type)
+	// 0x04 is SETTINGS frame, we'll send it empty for now
+
+	settingsPayload := []byte{ // A minimal valid SETTINGS frame with one setting
+		0x01, 0x00, 0x00, 0x00, 0x01, // First setting: Max streams
+	}
+
+	buf.Write(quicvarint.Append(nil, uint64(len(settingsPayload))))
+	buf.Write(settingsPayload)
+	_, err = stream.Write(buf.Bytes())
 	if err != nil {
-		fmt.Println("Error sending request:", err)
+		fmt.Println("Error sending SETTINGS frame:", err)
 		return nil
 	}
 
-	// Read response
-	buf := make([]byte, 1024)
-	n, err := stream.Read(buf)
+	// // Clear the buffer before sending HEADERS frame
+	// buf.Reset()
+
+	// // Send HEADERS frame (0x01 = HEADERS)
+	// buf.Write(quicvarint.Append(nil, 0x01)) // 0x01 = HEADERS frame type
+
+	// // Craft the raw HTTP/3 headers (GET /index.html)
+	// tempRequest := []byte(":method: GET\r\n" +
+	// 	":path: /index.html\r\n" +
+	// 	":authority: quic.tech\r\n" +
+	// 	"User-Agent: quic-go-client\r\n" +
+	// 	"\r\n")
+
+	// // Frame Length: length of the HTTP/3 headers
+	// buf.Write(quicvarint.Append(nil, uint64(len(tempRequest))))
+
+	// // Frame Payload: the actual HTTP/3 headers
+	// buf.Write(tempRequest)
+
+	// _, err = stream.Write(buf.Bytes())
+	// if err != nil {
+	// 	fmt.Println("Error sending request:", err)
+	// 	return nil
+	// }
+
+	// // Read response
+	response_buf := make([]byte, 1024)
+	n, err := stream.Read(response_buf)
 	if err != nil && err != io.EOF {
 		fmt.Println("Error reading response:", err)
 		return nil
 	}
 
-	fmt.Println("Response from server:", string(buf[:n]))
+	fmt.Println("Response from server:", string(response_buf[:n]))
 	defer stream.Close()
 
 	defer conn.Udpport.Close()
-	return buf[:n]
+	return response_buf[:n]
+
+	// return nil
 }
