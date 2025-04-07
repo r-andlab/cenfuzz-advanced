@@ -118,30 +118,30 @@ func SendHTTP3Request(conn *QUICConnection, request string) interface{} {
 		return nil
 	}
 
-	// // Clear the buffer before sending HEADERS frame
-	// buf.Reset()
+	// Clear the buffer before sending HEADERS frame
+	buf.Reset()
 
-	// // Send HEADERS frame (0x01 = HEADERS)
-	// buf.Write(quicvarint.Append(nil, 0x01)) // 0x01 = HEADERS frame type
+	// Send HEADERS frame (0x01 = HEADERS)
+	buf.Write(quicvarint.Append(nil, 0x01)) // 0x01 = HEADERS frame type
 
-	// // Craft the raw HTTP/3 headers (GET /index.html)
-	// tempRequest := []byte(":method: GET\r\n" +
-	// 	":path: /index.html\r\n" +
-	// 	":authority: quic.tech\r\n" +
-	// 	"User-Agent: quic-go-client\r\n" +
-	// 	"\r\n")
+	// Craft the raw HTTP/3 headers (GET /index.html)
+	tempRequest := []byte(":method: GET\r\n" +
+		":path: /index.js\r\n" +
+		":authority: quic.tech\r\n" +
+		"User-Agent: quic-go-client\r\n" +
+		"\r\n")
 
-	// // Frame Length: length of the HTTP/3 headers
-	// buf.Write(quicvarint.Append(nil, uint64(len(tempRequest))))
+	// Frame Length: length of the HTTP/3 headers
+	buf.Write(quicvarint.Append(nil, uint64(len(tempRequest))))
 
-	// // Frame Payload: the actual HTTP/3 headers
-	// buf.Write(tempRequest)
+	// Frame Payload: the actual HTTP/3 headers
+	buf.Write(tempRequest)
 
-	// _, err = stream.Write(buf.Bytes())
-	// if err != nil {
-	// 	fmt.Println("Error sending request:", err)
-	// 	return nil
-	// }
+	_, err = stream.Write(buf.Bytes())
+	if err != nil {
+		fmt.Println("Error sending request:", err)
+		return nil
+	}
 
 	// // Read response
 	response_buf := make([]byte, 1024)
