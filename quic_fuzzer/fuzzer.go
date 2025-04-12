@@ -75,15 +75,8 @@ func MakeConnectionQuic(target string, hostname string, requestWord RequestWord)
 	log.Println("request word is ", requestWord)
 	formattedHostname := FormatHttpRequest(requestWord)
 
-	conn := connection.NewQUICConnection(target, 443)
-	if conn == nil {
-		return formattedHostname, nil, "Dial"
-	}
+	response := connection.SendHTTP3Request(formattedHostname)
 
-	response := connection.SendHTTP3Request(conn, formattedHostname)
-	if conn.Err != nil {
-		return formattedHostname, nil, conn.Err.Error()
-	}
 	return formattedHostname, response, nil
 }
 
