@@ -6,9 +6,9 @@ import (
 	"crypto/x509"
 	//"fmt"
 	"io"
-	"os"
+	//"os"
 	"log"
-	"flag"
+	//"flag"
 	"net/http"
 	//"time"
 	"bytes"
@@ -87,20 +87,17 @@ import (
 
 // SendHTTPRequest sends an HTTP/3 request over QUIC
 func SendHTTP3Request( request string) interface{} {
-	quiet := flag.Bool("q", false, "don't print the data")
-	keyLogFile := flag.String("keylog", "", "key log file")
-	insecure := flag.Bool("insecure", false, "skip certificate verification")
 
 
-	var keyLog io.Writer
-	if len(*keyLogFile) > 0 {
-		f, err := os.Create(*keyLogFile)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer f.Close()
-		keyLog = f
-	}
+	// var keyLog io.Writer
+	// if len(*keyLogFile) > 0 {
+	// 	f, err := os.Create(*keyLogFile)
+	// 	if err != nil {
+	// 		log.Fatal(err)
+	// 	}
+	// 	defer f.Close()
+	// 	keyLog = f
+	// }
 
 	pool, err := x509.SystemCertPool()
 	if err != nil {
@@ -111,8 +108,8 @@ func SendHTTP3Request( request string) interface{} {
 	roundTripper := &http3.Transport{
 		TLSClientConfig: &tls.Config{
 			RootCAs:            pool,
-			InsecureSkipVerify: *insecure,
-			KeyLogWriter:       keyLog,
+			InsecureSkipVerify: false,
+			//KeyLogWriter:       keyLog,
 		},
 		QUICConfig: &quic.Config{
 			Tracer: qlog.DefaultConnectionTracer,
@@ -138,11 +135,8 @@ func SendHTTP3Request( request string) interface{} {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if *quiet {
-		log.Printf("Response Body: %d bytes", body.Len())
-	} else {
-		log.Printf("Response Body (%d bytes):\n%s", body.Len(), body.Bytes())
-	}
+	log.Printf("Response Body (%d bytes):\n%s", body.Len(), body.Bytes())
+	
 
 	return body
 	
