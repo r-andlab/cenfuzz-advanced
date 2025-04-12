@@ -1,21 +1,12 @@
 package quic_fuzzer
 
 import (
-	//"crypto/x509"
-	//"log"
-	//"strconv"
-	//"strings"
 	"fmt"
 	"log"
 
 	"github.com/censoredplanet/CenFuzz/connection"
-	//"github.com/censoredplanet/CenFuzz/util"
 	"github.com/google/go-cmp/cmp"
-	// tld "github.com/jpillora/go-tld"
-	//utls "github.com/refraction-networking/utls"
-	// this packet is need for quic connections to the server
-	//"github.com/quic-go/quic-go"
-)
+
 
 type RequestWord struct {
 	Hostname          string
