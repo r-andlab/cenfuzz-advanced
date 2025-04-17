@@ -1,25 +1,25 @@
 package connection
 
 import (
+	"bytes"
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
-	"bytes"
-
-
+	//"regexp"
+	//"strings"
 
 	"github.com/quic-go/quic-go"
 	"github.com/quic-go/quic-go/http3"
 	"github.com/quic-go/quic-go/qlog"
-	
 )
-
 
 // SendHTTPRequest sends an HTTP/3 request over QUIC
 func SendHTTP3Request( request string) interface{} {
 
+	fmt.Println("request = ", request)
 	pool, err := x509.SystemCertPool()
 	if err != nil {
 		log.Fatal(err)
@@ -41,9 +41,7 @@ func SendHTTP3Request( request string) interface{} {
 		Transport: roundTripper,
 	}
 
-	//hard coding for now
-	addr := "https://quic.nginx.org"
-
+	addr := "https://" + request
 	log.Printf("GET %s", addr)
 	rsp, err := hclient.Get(addr)
 	if err != nil {

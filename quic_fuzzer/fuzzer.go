@@ -1,13 +1,13 @@
 package quic_fuzzer
 
 import (
-	"fmt"
+	//"fmt"
 	"log"
 
 	"github.com/censoredplanet/CenFuzz/connection"
 	"github.com/google/go-cmp/cmp"
 
-
+)
 type RequestWord struct {
 	Hostname          string
 	GetWord           string `default:"GET"`
@@ -32,35 +32,35 @@ func containsRequestWord(s []*RequestWord, e *RequestWord) bool {
 // Returns a properly formatted HTTP/3 request for a URL.
 func FormatHttpRequest(requestWord RequestWord) string {
 	// Use GET as the default method if none is provided
-	method := "GET"
-	if requestWord.GetWord != "" {
-		method = requestWord.GetWord
-	}
+	// method := "GET"
+	// if requestWord.GetWord != "" {
+	// 	method = requestWord.GetWord
+	// }
 
 	// HTTP/3 as the protocol version
-	httpVersion := "HTTP/3"
-	if requestWord.QUICWord != "" {
-		httpVersion = requestWord.QUICWord
-	}
+	// httpVersion := "HTTP/3"
+	// if requestWord.QUICWord != "" {
+	// 	httpVersion = requestWord.QUICWord
+	// }
 
 	// Default path is "/" if not provided
-	path := "/"
-	if requestWord.Path != "" {
-		path = requestWord.Path
-	}
+	// path := "/"
+	// if requestWord.Path != "" {
+	// 	path = requestWord.Path
+	// }
 
 	// Ensure Host header is included
-	host := requestWord.Hostname
-	if host == "" {
-		host = "example.com" // Default host if not specified
-	}
+	// host := requestWord.Hostname
+	// if host == "" {
+	// 	host = "example.com" // Default host if not specified
+	// }
 
 	// Assemble the HTTP/3 request
-	request := fmt.Sprintf(
-		"%s %s %s\r\nHost: %s\r\nUser-Agent: YourUserAgent\r\nConnection: close\r\n\r\n",
-		method, path, httpVersion, host)
+	// request := fmt.Sprintf(
+	// 	"%s %s %s\r\nHost: %s\r\nUser-Agent: YourUserAgent\r\nConnection: close\r\n\r\n",
+	// 	method, path, httpVersion, host)
 
-	return request
+	return requestWord.Hostname
 }
 func MakeConnectionQuic(target string, hostname string, requestWord RequestWord) (interface{}, interface{}, interface{}) {
 	log.Println("request word is ", requestWord)
