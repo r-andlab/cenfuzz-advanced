@@ -17,20 +17,8 @@ func ECHFuzzerMapping(fuzzer int) string {
 	switch fuzzer {
 	case 1:
 		return "SNI Padding"
-	case 2:
-		return "Min Version Alternate"
-	case 3:
-		return "Max Version Alternate"
-	case 4:
-		return "CipherSuite Alternate"
-	case 5:
-		return "Client Certificate Alternate"
 	case 6:
 		return "SNI Alternate"
-	case 7:
-		return "SNI TLD Alternate"
-	case 8:
-		return "SNI Subdomain Alternate"
 	default:
 		return "NA"
 	}
@@ -40,20 +28,8 @@ func (f FuzzerSpec) ECHFuzzerInterface() ech_fuzzer.Fuzzer {
 	switch f.Fuzzer() {
 	case 1:
 		return &ech_fuzzer.ServernamePadding{}
-	case 2:
-		return &ech_fuzzer.MinVersionAlternate{}
-	case 3:
-		return &ech_fuzzer.MaxversionAlternate{}
-	case 4:
-		return &ech_fuzzer.CipherSuiteAlternate{}
-	case 5:
-		return &ech_fuzzer.ClientCertAlternate{}
 	case 6:
 		return &ech_fuzzer.ServernameAlternate{}
-	case 7:
-		return &ech_fuzzer.ServernameTLDAlternate{}
-	case 8:
-		return &ech_fuzzer.ServernameSubdomainsAlternate{}
 	default:
 		panic("unknown fuzzer")
 	}
