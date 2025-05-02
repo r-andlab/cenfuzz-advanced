@@ -176,11 +176,15 @@ func (h *QUICWorker) Worker(workQueue <-chan interface{}, resultQueue chan<- *ut
 		startTime := time.Now()
 		// uncensoredRequest, uncensoredResponse, uncensoredError := quic_fuzzer.MakeConnectionQuic(work.IP, uncensoredDomain, quic_fuzzer.RequestWord{Hostname: uncensoredDomain})
 		// time.Sleep(util.Sleep(uncensoredError))
+
+		// what it was before
 		uncensoredRequest, uncensoredResponse, uncensoredError := quic_fuzzer.MakeConnectionQuic(work.IP, work.Domain, quic_fuzzer.RequestWord{Hostname: work.Domain})
 		time.Sleep(util.Sleep(uncensoredError))
+
 		//Censored Normal
 		censoredRequest, censoredResponse, censoredError := quic_fuzzer.MakeConnectionQuic(work.IP, work.Domain, quic_fuzzer.RequestWord{Hostname: work.Domain})
 		time.Sleep(util.Sleep(censoredError))
+
 		//We're including the sleep time in endtime because that's the whole time taken for this one measurement. Could do it the other way also.
 		endTime := time.Now()
 		//Add normal results

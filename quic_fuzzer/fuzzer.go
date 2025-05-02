@@ -4,7 +4,7 @@ import (
 	//"fmt"
 	"log"
 
-	"github.com/censoredplanet/CenFuzz/connection"
+	//"github.com/censoredplanet/CenFuzz/connection"
 	"github.com/google/go-cmp/cmp"
 
 )
@@ -66,7 +66,7 @@ func MakeConnectionQuic(target string, hostname string, requestWord RequestWord)
 	log.Println("request word is ", requestWord)
 	formattedHostname := FormatHttpRequest(requestWord)
 
-	response := connection.SendHTTP3Request(formattedHostname)
+	response := 0
 
 	return formattedHostname, response, nil
 }
