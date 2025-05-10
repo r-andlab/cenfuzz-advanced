@@ -1,11 +1,12 @@
 package quic_fuzzer
 
 import (
-	//"fmt"
-	"log"
+	"fmt"
+	"time"
 
 	//"github.com/censoredplanet/CenFuzz/connection"
 	"github.com/google/go-cmp/cmp"
+	"github.com/quic-go/quic-go/fuzzing/header"
 
 )
 type RequestWord struct {
@@ -28,49 +29,54 @@ func containsRequestWord(s []*RequestWord, e *RequestWord) bool {
 	return false
 }
 
-// Returns of an HTTP request for URL.
-// Returns a properly formatted HTTP/3 request for a URL.
-func FormatHttpRequest(requestWord RequestWord) string {
-	// Use GET as the default method if none is provided
-	// method := "GET"
-	// if requestWord.GetWord != "" {
-	// 	method = requestWord.GetWord
-	// }
 
-	// HTTP/3 as the protocol version
-	// httpVersion := "HTTP/3"
-	// if requestWord.QUICWord != "" {
-	// 	httpVersion = requestWord.QUICWord
-	// }
-
-	// Default path is "/" if not provided
-	// path := "/"
-	// if requestWord.Path != "" {
-	// 	path = requestWord.Path
-	// }
-
-	// Ensure Host header is included
-	// host := requestWord.Hostname
-	// if host == "" {
-	// 	host = "example.com" // Default host if not specified
-	// }
-
-	// Assemble the HTTP/3 request
-	// request := fmt.Sprintf(
-	// 	"%s %s %s\r\nHost: %s\r\nUser-Agent: YourUserAgent\r\nConnection: close\r\n\r\n",
-	// 	method, path, httpVersion, host)
-
-	return requestWord.Hostname
-}
-func MakeConnectionQuic(target string, hostname string, requestWord RequestWord) (interface{}, interface{}, interface{}) {
-	log.Println("request word is ", requestWord)
-	formattedHostname := FormatHttpRequest(requestWord)
-
-	response := 0
-
-	return formattedHostname, response, nil
+// FormatHttpRequest builds HTTP/3 pseudo-headers from a RequestWord
+func FormatHttpRequest(req RequestWord) string {
+	// Customize this as needed — this is a simple example:
+	return fmt.Sprintf(":method: GET\r\n:path: %s\r\n:authority: %s\r\nuser-agent: quic-go-client\r\n%s\r\n",
+		req.Path, req.Hostname, req.Header)
 }
 
+// MakeConnectionQuicNormal establishes a QUIC connection and sends an HTTP/3 request
+func MakeConnectionQuicNormal(target string, hostname string, requestWord RequestWord) (interface{}, interface{}, interface{}) {
+	// Step 1: Establish the QUIC connection
+	conn := connection.NewQUICConnection(target, 443)
+	if conn == nil || conn.Raw == nil {
+		return hostname, nil, fmt.Errorf("failed to connect to %s", target)
+	}
+
+	// Step 2: Open a new QUIC stream
+	stream, err := conn.Raw.OpenStreamSync(context.Background())
+	if err != nil {
+		return hostname, nil, fmt.Errorf("failed to open stream: %v", err)
+	}
+	defer stream.Close()
+	defer conn.Udpport.Close()
+
+	// Step 3: Build HTTP/3 headers from requestWord
+	headers := FormatHttpRequest(requestWord)
+
+	// Step 4: Build a HEADERS frame (0x01) with quicvarint
+	buf := &bytes.Buffer{}
+	buf.Write(quicvarint.Append(nil, 0x01))                        // HEADERS frame type
+	buf.Write(quicvarint.Append(nil, uint64(len(headers))))       // length
+	buf.Write([]byte(headers))                                    // actual header payload
+
+	// Step 5: Send the HEADERS frame
+	if _, err := stream.Write(buf.Bytes()); err != nil {
+		return hostname, nil, fmt.Errorf("failed to send headers: %v", err)
+	}
+
+	// Step 6: Read the response (assume immediate reply on same stream)
+	respBuf := make([]byte, 2048)
+	stream.SetReadDeadline(time.Now().Add(2 * time.Second)) // Optional: timeout
+	n, err := stream.Read(respBuf)
+	if err != nil && err != io.EOF {
+		return hostname, nil, fmt.Errorf("failed to read response: %v", err)
+	}
+
+	return hostname, respBuf[:n], nil
+}
 
 type Fuzzer interface {
 	Init(all bool) []*RequestWord
