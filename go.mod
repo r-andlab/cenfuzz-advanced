@@ -11,7 +11,6 @@ require (
 	github.com/libp2p/go-reuseport v0.2.0
 	github.com/mxschmitt/golang-combinations v1.1.0
 	github.com/oschwald/geoip2-golang v1.8.0
-	github.com/quic-go/quic-go v0.50.1
 	github.com/refraction-networking/utls v1.1.2
 
 )
@@ -34,6 +33,8 @@ require (
 	github.com/onsi/ginkgo/v2 v2.9.5 // indirect
 	github.com/oschwald/maxminddb-golang v1.10.0 // indirect
 	github.com/quic-go/qpack v0.5.1 // indirect
+	github.com/quic-go/quic-go v0.51.0 // indirect
+	github.com/r-andlab/quic-go v0.0.0-20250516001840-a9c0039568fc // indirect
 	go.opencensus.io v0.23.0 // indirect
 	go.uber.org/mock v0.5.0 // indirect
 	golang.org/x/crypto v0.26.0 // indirect
@@ -53,5 +54,3 @@ require (
 )
 
 replace cenfuzz-advanced/quic_fuzzer => ./quic_fuzzer
-
-replace github.com/quic-go/quic-go => /home/mike/Documents/college/research/cenfuzz-advanced/quic-go

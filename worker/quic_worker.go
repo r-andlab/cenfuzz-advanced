@@ -1,84 +1,32 @@
 package worker
 
 import (
+	//"fmt"
+	//"log"
 	"fmt"
-	"log"
 	"sync"
 	"time"
+	"math/rand"
 
-	"cenfuzz-advanced/quic_fuzzer"
 	"github.com/censoredplanet/CenFuzz/util"
+	quic "github.com/r-andlab/quic-go/fuzzing/cenfuzz"
 )
 
 type QUICWorker struct{}
 
-func (f FuzzerSpec) QUICFuzzerInterface() quic_fuzzer.Fuzzer {
-	switch f.Fuzzer() {
-	case 1:
-		return &quic_fuzzer.HostnamePadding{}
-	default:
-		panic("unknown fuzzer")
-	}
-}
-
-func QUICFuzzerMapping(fuzzer int) string {
-	switch fuzzer {
-	case 1:
-		return "Hostname Padding"
-	default:
-		return "NA"
-	}
-}
-
-
 type QUICFuzzerObject struct {
 	TestName     string
 	Spec         FuzzerSpec
-	RequestWords []*quic_fuzzer.RequestWord
 }
 
-//Using a separate struct to assign work instead of just the input,
-//since in the future we may want to assign different work for each vantage point
 type QUICWork struct {
 	IP      string
 	Domain  string
 	Fuzzers []*QUICFuzzerObject
 }
 
-func (f FuzzerSpec) QuicFuzzerInterface() quic_fuzzer.Fuzzer {
-	switch f.Fuzzer() {
-	case 1:
-		// return &quic_fuzzer.HostnamePadding{}
-		fmt.Println("we are attempting to do the padding here")
-		return &quic_fuzzer.HostnamePadding{}
-	default:
-		panic("unknown fuzzer")
-	}
-}
 
-func (h *QUICWorker) FuzzerObjects(fuzzerList []*util.FuzzerInput) interface{} {
-	var fuzzerObjects []*QUICFuzzerObject
-	for _, fuzzerStruct := range fuzzerList {
-
-		fuzzerspec := FuzzerSpec(fuzzerStruct.FuzzerNumber)
-		fuzzerName := QUICFuzzerMapping(fuzzerStruct.FuzzerNumber)
-		if fuzzerName == "NA" {
-			log.Println("[QUICWorker.FuzzerObjects] WARNING: Fuzzer not available: ", fuzzerStruct.FuzzerNumber)
-			continue
-		}
-		requestWords := fuzzerspec.QUICFuzzerInterface().Init(fuzzerStruct.All)
-
-		fuzzerObjects = append(fuzzerObjects, &QUICFuzzerObject{
-			TestName:     fuzzerName,
-			Spec:         fuzzerspec,
-			RequestWords: requestWords,
-		})
-	}
-	return fuzzerObjects
-
-}
-
-func (h *QUICWorker) GenerateTemplate(response interface{}, keyword string) interface{} {
+func (q *QUICWorker) GenerateTemplate(response interface{}, keyword string) interface{} {
 	if response == nil {
 		return nil
 	}
@@ -92,21 +40,22 @@ func (h *QUICWorker) GenerateTemplate(response interface{}, keyword string) inte
 	return filterBody(response.(string))
 }
 
-func (h *QUICWorker) MatchesControl(results []*util.Result) []*util.Result {
+//TODO: there are more efficient ways of doing this than going through the list twice, but this will do for now
+func (q *QUICWorker) MatchesControl(results []*util.Result) []*util.Result {
 	var normalResponse interface{}
 	var normalError interface{}
 
 	for _, result := range results {
 		if result.IsNormal == true {
-			normalResponse = h.GenerateTemplate(result.Response, result.Domain)
+			normalResponse = q.GenerateTemplate(result.Response, result.Domain)
 			normalError = result.Error
 		}
 	}
 	for _, result := range results {
 		normalDifferences := ""
 		uncensoredDifferences := ""
-		resultResponseTemplate := h.GenerateTemplate(result.Response, result.Domain)
-		uncensoredResponseTemplate := h.GenerateTemplate(result.UncensoredResponse, result.Domain)
+		resultResponseTemplate := q.GenerateTemplate(result.Response, result.Domain)
+		uncensoredResponseTemplate := q.GenerateTemplate(result.UncensoredResponse, result.Domain)
 		if resultResponseTemplate == normalResponse && result.Error == normalError {
 			result.MatchesNormal = true
 		} else {
@@ -149,16 +98,39 @@ func (h *QUICWorker) MatchesControl(results []*util.Result) []*util.Result {
 	return results
 }
 
-func (h *QUICWorker) SendResults(results []*util.Result, ResultsQueue chan<- *util.Result) {
-	annotatedResults := h.MatchesControl(results)
+// the send result func is definitely nessary 
+func (q *QUICWorker) SendResults(results []*util.Result, ResultsQueue chan<- *util.Result) {
+	annotatedResults := q.MatchesControl(results)
 	for _, result := range annotatedResults {
 		ResultsQueue <- result
 	}
 
 }
 
+// func (f FuzzerSpec) QUICFuzzerInterface() quic_fuzzer.Fuzzer {
+// 	switch f.Fuzzer() {
+// 	// Replace with actual QUIC fuzzers
+// 	case 1:
+// 		return &quic_fuzzer.InitialPacketMutation{}
+// 	case 2:
+// 		return &quic_fuzzer.QuicVersionSwap{}
+// 	default:
+// 		panic("unknown QUIC fuzzer")
+// 	}
+// }
 
-func (h *QUICWorker) Work(ip string, domain string, fuzzers interface{}) interface{} {
+// func QUICFuzzerMapping(fuzzer int) string {
+// 	switch fuzzer {
+// 	case 1:
+// 		return "Initial Packet Mutation"
+// 	case 2:
+// 		return "QUIC Version Swap"
+// 	default:
+// 		return "NA"
+// 	}
+// }
+
+func (q *QUICWorker) Work(ip string, domain string, fuzzers interface{}) interface{} {
 	return &QUICWork{
 		IP:      ip,
 		Domain:  domain,
@@ -166,37 +138,37 @@ func (h *QUICWorker) Work(ip string, domain string, fuzzers interface{}) interfa
 	}
 }
 
+func (q *QUICWorker) FuzzerObjects(fuzzerList []*util.FuzzerInput) interface{} {
+	var fuzzerObjects []*QUICFuzzerObject
+	return fuzzerObjects
+}
 
-func (h *QUICWorker) Worker(workQueue <-chan interface{}, resultQueue chan<- *util.Result, uncensoredDomain string, wg *sync.WaitGroup, done chan<- bool) {
+// func (q *QUICWorker) SendResults(results []*util.Result, ResultsQueue chan<- *util.Result) {
+// 	for _, result := range results {
+// 		ResultsQueue <- result
+// 	}
+// }
+
+func (q *QUICWorker) Worker(workQueue <-chan interface{}, resultQueue chan<- *util.Result, uncensoredDomain string, wg *sync.WaitGroup, done chan<- bool) {
 	for w := range workQueue {
 		work := w.(*QUICWork)
 		var results []*util.Result
+		fmt.Println("the work is :", work)
 
-		//Uncensored Normal
 		startTime := time.Now()
-		// uncensoredRequest, uncensoredResponse, uncensoredError := quic_fuzzer.MakeConnectionQuic(work.IP, uncensoredDomain, quic_fuzzer.RequestWord{Hostname: uncensoredDomain})
-		// time.Sleep(util.Sleep(uncensoredError))
-
-		// what it was before
-		uncensoredRequest, uncensoredResponse, uncensoredError := quic_fuzzer.MakeConnectionQuic(work.IP, work.Domain, quic_fuzzer.RequestWord{Hostname: work.Domain})
+		uncensoredResponse, uncensoredError := quic.SendInitialQUICPacket("google.com")
 		time.Sleep(util.Sleep(uncensoredError))
-
-		//Censored Normal
-		censoredRequest, censoredResponse, censoredError := quic_fuzzer.MakeConnectionQuic(work.IP, work.Domain, quic_fuzzer.RequestWord{Hostname: work.Domain})
+		censoredResponse, censoredError := quic.SendInitialQUICPacket("quic.nginx.org")
 		time.Sleep(util.Sleep(censoredError))
-
-		//We're including the sleep time in endtime because that's the whole time taken for this one measurement. Could do it the other way also.
 		endTime := time.Now()
-		//Add normal results
+
 		results = append(results, &util.Result{
 			IP:                 work.IP,
 			Domain:             work.Domain,
 			TestName:           "Normal",
 			IsNormal:           true,
-			Request:            censoredRequest,
 			Response:           censoredResponse,
 			Error:              censoredError,
-			UncensoredRequest:  uncensoredRequest,
 			UncensoredResponse: uncensoredResponse,
 			UncensoredError:    uncensoredError,
 			StartTime:          startTime,
@@ -204,68 +176,52 @@ func (h *QUICWorker) Worker(workQueue <-chan interface{}, resultQueue chan<- *ut
 		})
 
 		if Break(censoredError) && Break(uncensoredError) {
-			h.SendResults(results, resultQueue)
+			q.SendResults(results, resultQueue)
 			wg.Done()
 			continue
 		}
-		var breakFlag bool
+
 		for _, fuzzerObject := range work.Fuzzers {
-			breakFlag = false
-			for _, requestWord := range fuzzerObject.RequestWords {
-				//Uncensored Test
-				//Create copy
-				uncensoredRequestWord := requestWord.Hostname
-				censoredRequestWord := requestWord.Hostname
-				formattedUncensoredDomain := fmt.Sprintf(uncensoredRequestWord, uncensoredDomain)
+			//for _, requestWord := range fuzzerObject.RequestWords {
+			// dummy loop 
+			for _, requestWord := range []string{"quic.nginx.org"} {
+				// getting a random time seed for now later on will be able to set the fuzzing strategy 
+				rand.Seed(time.Now().UnixNano()) // seed RNG with current time
+
+				// Generate 32 random bytes (change size as needed)
+				data := make([]byte, 32)
+				for i := range data {
+					data[i] = byte(rand.Intn(256)) // random byte: 0–255
+				}
+
 				startTime = time.Now()
-				uncensoredRequest, uncensoredResponse, uncensoredErr := fuzzerObject.Spec.QuicFuzzerInterface().Fuzz(work.IP, work.Domain, quic_fuzzer.RequestWord{
-					Hostname:          formattedUncensoredDomain,
-					GetWord:           requestWord.GetWord,
-					QUICWord:          requestWord.QUICWord,
-					HostWord:          requestWord.HostWord,
-					QUICDelimiterWord: requestWord.QUICDelimiterWord,
-					Path:              requestWord.Path,
-					Header:            requestWord.Header,
-				})
+				uncensoredResponse, uncensoredErr := quic.Fuzz(data ,"google.com")
 				time.Sleep(util.Sleep(uncensoredErr))
-				formattedCensoredDomain := fmt.Sprintf(censoredRequestWord, work.Domain)
-				censoredRequest, censoredResponse, censoredErr := fuzzerObject.Spec.QuicFuzzerInterface().Fuzz(work.IP, work.Domain, quic_fuzzer.RequestWord{
-					Hostname:          formattedCensoredDomain,
-					GetWord:           requestWord.GetWord,
-					QUICWord:          requestWord.QUICWord,
-					HostWord:          requestWord.HostWord,
-					QUICDelimiterWord: requestWord.QUICDelimiterWord,
-					Path:              requestWord.Path,
-					Header:            requestWord.Header,
-				})
+				censoredResponse, censoredErr := quic.Fuzz(data ,requestWord) 
 				time.Sleep(util.Sleep(censoredErr))
 				endTime = time.Now()
+
 				results = append(results, &util.Result{
 					IP:                 work.IP,
 					Domain:             work.Domain,
 					TestName:           fuzzerObject.TestName,
 					IsNormal:           false,
-					Request:            censoredRequest,
+					//Request:            censoredRequest,
 					Response:           censoredResponse,
 					Error:              censoredErr,
-					UncensoredRequest:  uncensoredRequest,
+					//UncensoredRequest:  uncensoredRequest,
 					UncensoredResponse: uncensoredResponse,
 					UncensoredError:    uncensoredErr,
 					StartTime:          startTime,
 					EndTime:            endTime,
 				})
-				if Break(censoredError) && Break(uncensoredError) {
-					breakFlag = true
+				if Break(censoredErr) && Break(uncensoredErr) {
 					break
 				}
 			}
-			if breakFlag {
-				break
-			}
 		}
-		h.SendResults(results, resultQueue)
+		q.SendResults(results, resultQueue)
 		wg.Done()
 	}
 	done <- true
-
 }
