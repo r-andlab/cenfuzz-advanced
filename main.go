@@ -40,6 +40,8 @@ func main() {
 	workQueue := make(chan interface{})
 
 	fuzzerList := util.ParseFuzzerInfile(config.FuzzerInFile)
+	fmt.Println("fuzzerList = ", fuzzerList)
+	fmt.Println("FuzzerInFile", config.FuzzerInFile)
 	fuzzerObjects := w.FuzzerObjects(fuzzerList)
 
 	var workWG sync.WaitGroup
@@ -54,6 +56,8 @@ func main() {
 	for _, input := range inputs {
 		vp := input.VP
 		vp.Mu.Lock()
+		fmt.Println("hit this point")
+		fmt.Println("fuzzerObjects are ", fuzzerObjects)
 		work := w.Work(input.VP.IP, input.Domain, fuzzerObjects)
 		workWG.Add(1)
 		workQueue <- work

@@ -1,8 +1,7 @@
 package worker
 
 import (
-	//"fmt"
-	//"log"
+	"log"
 	"fmt"
 	"sync"
 	"time"
@@ -23,6 +22,65 @@ type QUICWork struct {
 	IP      string
 	Domain  string
 	Fuzzers []*QUICFuzzerObject
+}
+
+// this is the fuzzer mapping for quic 
+func QUICFuzzerMapping(fuzzer int) string {
+	switch fuzzer {
+	case 1:
+		return "Connection ID Length Mutation"
+	case 2:
+		return "DCID Mismatch Check"
+	case 3:
+		return "Inconsistent 0-RTT Detection"
+	case 4:
+		return "Retry packet path"
+	case 5:
+		return "Header append validation"
+	case 6:
+		return "Length-based filtering before network send"
+	default:
+		return "NA"
+	}
+}
+
+func (f FuzzerSpec) HTTPFuzzerInterface() http_fuzzer.Fuzzer {
+	switch f.Fuzzer() {
+	case 1:
+		return &http_fuzzer.HostnamePadding{}
+	case 2:
+		return &http_fuzzer.GetWordCapitalize{}
+	case 3:
+		return &http_fuzzer.GetWordRemove{}
+	case 4:
+		return &http_fuzzer.GetWordAlternate{}
+	case 5:
+		return &http_fuzzer.HttpWordCapitalize{}
+	case 6:
+		return &http_fuzzer.HttpWordRemove{}
+	case 7:
+		return &http_fuzzer.HttpWordAlternate{}
+	case 8:
+		return &http_fuzzer.HostWordCapitalize{}
+	case 9:
+		return &http_fuzzer.HostWordRemove{}
+	case 10:
+		return &http_fuzzer.HostWordAlternate{}
+	case 11:
+		return &http_fuzzer.HttpDelimiterWordRemove{}
+	case 12:
+		return &http_fuzzer.PathAlternate{}
+	case 13:
+		return &http_fuzzer.HeaderAlternate{}
+	case 14:
+		return &http_fuzzer.HostNameAlternate{}
+	case 15:
+		return &http_fuzzer.HostnameTLDAlternate{}
+	case 16:
+		return &http_fuzzer.HostnameSubdomainsAlternate{}
+	default:
+		panic("unknown fuzzer")
+	}
 }
 
 
@@ -140,6 +198,18 @@ func (q *QUICWorker) Work(ip string, domain string, fuzzers interface{}) interfa
 
 func (q *QUICWorker) FuzzerObjects(fuzzerList []*util.FuzzerInput) interface{} {
 	var fuzzerObjects []*QUICFuzzerObject
+	for _, fuzzerStruct := range fuzzerList {
+		// fmt.Println("fuzzerStruct",fuzzerStruct)
+		fuzzerspec := FuzzerSpec(fuzzerStruct.FuzzerNumber)
+		fuzzerName := QUICFuzzerMapping(fuzzerStruct.FuzzerNumber)
+		fmt.Println("fuzzerspec", fuzzerspec)
+		if fuzzerName == "NA" {
+			log.Println("[HTTPWorker.FuzzerObjects] WARNING: Fuzzer not available: ", fuzzerStruct.FuzzerNumber)
+			continue
+		}
+		//fmt.Println("fuzzer name = ", fuzzerName)
+
+	}
 	return fuzzerObjects
 }
 
@@ -161,6 +231,8 @@ func (q *QUICWorker) Worker(workQueue <-chan interface{}, resultQueue chan<- *ut
 		censoredResponse, censoredError := quic.SendInitialQUICPacket("quic.nginx.org")
 		time.Sleep(util.Sleep(censoredError))
 		endTime := time.Now()
+		fmt.Println("non fuzzed uncensoredResponse", uncensoredResponse)
+		fmt.Println("non fuzzed censoredResponse", censoredResponse)
 
 		results = append(results, &util.Result{
 			IP:                 work.IP,
@@ -200,6 +272,9 @@ func (q *QUICWorker) Worker(workQueue <-chan interface{}, resultQueue chan<- *ut
 				censoredResponse, censoredErr := quic.Fuzz(data ,requestWord) 
 				time.Sleep(util.Sleep(censoredErr))
 				endTime = time.Now()
+
+				fmt.Println("uncensoredResponse fuzzed = ", uncensoredResponse)
+				fmt.Println("censoredResponse fuzzed = ", censoredResponse)
 
 				results = append(results, &util.Result{
 					IP:                 work.IP,
