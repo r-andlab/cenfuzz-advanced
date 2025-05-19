@@ -17,6 +17,7 @@ type QUICWorker struct{}
 type QUICFuzzerObject struct {
 	TestName     string
 	Spec         FuzzerSpec
+	RequestWords []*quic_fuzzer.RequestWord
 }
 
 type QUICWork struct {
@@ -48,17 +49,17 @@ func QUICFuzzerMapping(fuzzer int) string {
 func (f FuzzerSpec) QUICFuzzerInterface() quic_fuzzer.Fuzzer {
 	switch f.Fuzzer() {
 	case 1:
-		return &quic_fuzzer.mutateConnIDLen{}
+		return &quic_fuzzer.MutateConnIDLen{}
 	case 2:
-		return &quic_fuzzer.mutateConnIDLen{}
+		return &quic_fuzzer.MutateConnIDLen{}
 	case 3:
-		return &quic_fuzzer.mutateConnIDLen{}
+		return &quic_fuzzer.MutateConnIDLen{}
 	case 4:
-		return &quic_fuzzer.mutateConnIDLen{}
+		return &quic_fuzzer.MutateConnIDLen{}
 	case 5:
-		return &quic_fuzzer.mutateConnIDLen{}
+		return &quic_fuzzer.MutateConnIDLen{}
 	case 6:
-		return &quic_fuzzer.mutateConnIDLen{}
+		return &quic_fuzzer.MutateConnIDLen{}
 	default:
 		panic("unknown fuzzer")
 	}
@@ -188,7 +189,15 @@ func (q *QUICWorker) FuzzerObjects(fuzzerList []*util.FuzzerInput) interface{} {
 			log.Println("[HTTPWorker.FuzzerObjects] WARNING: Fuzzer not available: ", fuzzerStruct.FuzzerNumber)
 			continue
 		}
-		//fmt.Println("fuzzer name = ", fuzzerName)
+		fmt.Println("fuzzer name = ", fuzzerName)
+		// creating the requests 
+		requestWords := fuzzerspec.QUICFuzzerInterface().Init(fuzzerStruct.All)
+
+		fuzzerObjects = append(fuzzerObjects, &QUICFuzzerObject{
+			TestName:     fuzzerName,
+			Spec:         fuzzerspec,
+			RequestWords: requestWords,
+		})
 
 	}
 	return fuzzerObjects
