@@ -8,7 +8,7 @@ import (
 	//"github.com/google/go-cmp/cmp"
 )
 
-type QUICRequestWord struct {
+type RequestWord struct {
 	DCID      []byte
 	SCID      []byte
 	Version   uint32
@@ -40,3 +40,9 @@ type QUICRequestWord struct {
 // 	Init(all bool) []*RequestWord
 // 	Fuzz(ip string, domain string, requestWord RequestWord) (interface{}, interface{}, interface{})
 // }
+
+// need the interface for fuzz
+type Fuzzer interface {
+	Init(all bool) []*RequestWord
+	Fuzz(ip string, domain string, requestWord RequestWord) (interface{}, interface{})
+}

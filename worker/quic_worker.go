@@ -8,6 +8,7 @@ import (
 	"math/rand"
 
 	"github.com/censoredplanet/CenFuzz/util"
+	"cenfuzz-advanced/quic_fuzzer"
 	quic "github.com/r-andlab/quic-go/fuzzing/cenfuzz"
 )
 
@@ -44,24 +45,24 @@ func QUICFuzzerMapping(fuzzer int) string {
 	}
 }
 
-// func (f FuzzerSpec) QUICFuzzerInterface() quic_fuzzer.Fuzzer {
-// 	switch f.Fuzzer() {
-// 	case 1:
-// 		return 
-// 	case 2:
-// 		return 
-// 	case 3:
-// 		return 
-// 	case 4:
-// 		return 
-// 	case 5:
-// 		return
-// 	case 6:
-// 		return 
-// 	default:
-// 		panic("unknown fuzzer")
-// 	}
-// }
+func (f FuzzerSpec) QUICFuzzerInterface() quic_fuzzer.Fuzzer {
+	switch f.Fuzzer() {
+	case 1:
+		return &quic_fuzzer.mutateConnIDLen{}
+	case 2:
+		return &quic_fuzzer.mutateConnIDLen{}
+	case 3:
+		return &quic_fuzzer.mutateConnIDLen{}
+	case 4:
+		return &quic_fuzzer.mutateConnIDLen{}
+	case 5:
+		return &quic_fuzzer.mutateConnIDLen{}
+	case 6:
+		return &quic_fuzzer.mutateConnIDLen{}
+	default:
+		panic("unknown fuzzer")
+	}
+}
 
 
 func (q *QUICWorker) GenerateTemplate(response interface{}, keyword string) interface{} {
