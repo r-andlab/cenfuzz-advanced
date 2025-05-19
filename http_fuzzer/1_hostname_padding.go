@@ -1,6 +1,7 @@
 package http_fuzzer
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/censoredplanet/CenFuzz/config"
@@ -37,6 +38,10 @@ func (h *HostnamePadding) Init(all bool) []*RequestWord {
 			requestWords = append(requestWords, &RequestWord{Hostname: hostname})
 		}
 	}
+	for _, my_request := range requestWords {
+		fmt.Println("my_request", my_request)
+	}
+	fmt.Println("new line")
 	return requestWords
 }
 

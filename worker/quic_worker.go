@@ -44,44 +44,24 @@ func QUICFuzzerMapping(fuzzer int) string {
 	}
 }
 
-func (f FuzzerSpec) HTTPFuzzerInterface() http_fuzzer.Fuzzer {
-	switch f.Fuzzer() {
-	case 1:
-		return &http_fuzzer.HostnamePadding{}
-	case 2:
-		return &http_fuzzer.GetWordCapitalize{}
-	case 3:
-		return &http_fuzzer.GetWordRemove{}
-	case 4:
-		return &http_fuzzer.GetWordAlternate{}
-	case 5:
-		return &http_fuzzer.HttpWordCapitalize{}
-	case 6:
-		return &http_fuzzer.HttpWordRemove{}
-	case 7:
-		return &http_fuzzer.HttpWordAlternate{}
-	case 8:
-		return &http_fuzzer.HostWordCapitalize{}
-	case 9:
-		return &http_fuzzer.HostWordRemove{}
-	case 10:
-		return &http_fuzzer.HostWordAlternate{}
-	case 11:
-		return &http_fuzzer.HttpDelimiterWordRemove{}
-	case 12:
-		return &http_fuzzer.PathAlternate{}
-	case 13:
-		return &http_fuzzer.HeaderAlternate{}
-	case 14:
-		return &http_fuzzer.HostNameAlternate{}
-	case 15:
-		return &http_fuzzer.HostnameTLDAlternate{}
-	case 16:
-		return &http_fuzzer.HostnameSubdomainsAlternate{}
-	default:
-		panic("unknown fuzzer")
-	}
-}
+// func (f FuzzerSpec) QUICFuzzerInterface() quic_fuzzer.Fuzzer {
+// 	switch f.Fuzzer() {
+// 	case 1:
+// 		return 
+// 	case 2:
+// 		return 
+// 	case 3:
+// 		return 
+// 	case 4:
+// 		return 
+// 	case 5:
+// 		return
+// 	case 6:
+// 		return 
+// 	default:
+// 		panic("unknown fuzzer")
+// 	}
+// }
 
 
 func (q *QUICWorker) GenerateTemplate(response interface{}, keyword string) interface{} {

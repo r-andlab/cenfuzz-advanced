@@ -1,24 +1,22 @@
 package quic_fuzzer
 
-// import (
-// 	"fmt"
-// 	"time"
+import (
+	//"fmt"
+	//"time"
 
-// 	//"github.com/censoredplanet/CenFuzz/connection"
-// 	"github.com/google/go-cmp/cmp"
-// 	"github.com/quic-go/quic-go/fuzzing/header"
+	//"github.com/censoredplanet/CenFuzz/connection"
+	//"github.com/google/go-cmp/cmp"
+)
 
-// )
-// type RequestWord struct {
-// 	Hostname          string
-// 	GetWord           string `default:"GET"`
-// 	QUICWord          string `default:"HTTP/3.3"`
-// 	HostWord          string `default:"Host:"`
-// 	QUICDelimiterWord string `default:"\r\n"`
-// 	Path              string `default:"/"`
-// 	Header            string `default:""`
-// 	ALPN              string `default:"h3"`
-// }
+type QUICRequestWord struct {
+	DCID      []byte
+	SCID      []byte
+	Version   uint32
+	PacketType byte
+	Token     []byte
+	Length    uint64
+	Payload   []byte // optional
+}
 
 // func containsRequestWord(s []*RequestWord, e *RequestWord) bool {
 // 	for _, a := range s {
@@ -37,10 +35,6 @@ package quic_fuzzer
 // 		req.Path, req.Hostname, req.Header)
 // }
 
-// // MakeConnectionQuicNormal establishes a QUIC connection and sends an HTTP/3 request
-// func MakeConnectionQuicNormal(target string, hostname string, requestWord RequestWord) (interface{}, interface{}, interface{}) {
-	
-// }
 
 // type Fuzzer interface {
 // 	Init(all bool) []*RequestWord
