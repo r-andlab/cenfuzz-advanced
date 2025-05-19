@@ -179,6 +179,65 @@ func SendHTTPSRequest(conn *Connection, config utls.Config) *util.TLSdata {
 	return tlsData
 }
 
+func SendECHRequest(conn *Connection, config utls.Config, spec utls.ClientHelloSpec, flag bool) *util.TLSdata {
+	defer conn.Raw.Close()
+	conn.Raw.SetReadDeadline(time.Now().Add(2 * time.Second))
+	tlsConn := utls.UClient(conn.Raw, &config, utls.HelloCustom)
+	if !flag {
+		tlsConn = utls.UClient(conn.Raw, &config, utls.HelloChrome_Auto)
+	}
+	defer tlsConn.Close()
+
+	//Apply our own custom ClientHelloSpec
+	err := tlsConn.ApplyPreset(&spec)
+	if err != nil {
+		err = conn.handleError(err)
+		return nil
+	}
+	err = tlsConn.Handshake()
+	if err != nil {
+		err = conn.handleError(err)
+		return nil
+	}
+
+	state := tlsConn.ConnectionState()
+
+	tlsData := &util.TLSdata{
+		Version:                    state.Version,
+		HandshakeComplete:          state.HandshakeComplete,
+		CipherSuite:                state.CipherSuite,
+		NegotiatedProtocol:         state.NegotiatedProtocol,
+		NegotiatedProtocolIsMutual: state.NegotiatedProtocolIsMutual,
+		PeerCertificates:           state.PeerCertificates[0].Raw,
+		ServerName:                 state.ServerName,
+	}
+
+	getRequest := fmt.Sprintf("GET / HTTP/1.1\r\nHost:%s\r\nConnection: close\r\n\r\n", config.ServerName)
+	_, err = tlsConn.Write([]byte(getRequest))
+	if err != nil {
+		err = conn.handleError(err)
+		return tlsData
+	}
+	maxResponseLength := 1 << 16
+	httpResponse := make([]byte, maxResponseLength)
+
+	responseLength := 0
+	for {
+		// TODO(adrs): add to config
+		tlsConn.SetReadDeadline(time.Now().Add(10 * time.Second))
+		n, err := tlsConn.Read(httpResponse[responseLength:maxResponseLength])
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			err = conn.handleError(err)
+			return tlsData
+		}
+		responseLength += n
+	}
+	tlsData.HTTPResponse = string(httpResponse[:responseLength])
+	return tlsData
+}
+
 func (conn *Connection) handleError(err error) error {
 	if err != nil {
 		//log.Println("Error in connection: ", err)
