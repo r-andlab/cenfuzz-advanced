@@ -213,7 +213,6 @@ func (q *QUICWorker) Worker(workQueue <-chan interface{}, resultQueue chan<- *ut
 	for w := range workQueue {
 		work := w.(*QUICWork)
 		var results []*util.Result
-		fmt.Println("the work is :", work)
 
 		startTime := time.Now()
 		uncensoredResponse, uncensoredError := quic.SendInitialQUICPacket("google.com")
