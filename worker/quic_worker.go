@@ -1,14 +1,16 @@
 package worker
 
 import (
-	"log"
+	//"bytes"
 	"fmt"
+	"log"
+	"math/rand"
 	"sync"
 	"time"
-	"math/rand"
+
+	"cenfuzz-advanced/quic_fuzzer"
 
 	"github.com/censoredplanet/CenFuzz/util"
-	"cenfuzz-advanced/quic_fuzzer"
 	quic "github.com/r-andlab/quic-go/fuzzing/cenfuzz"
 )
 
@@ -70,14 +72,19 @@ func (q *QUICWorker) GenerateTemplate(response interface{}, keyword string) inte
 	if response == nil {
 		return nil
 	}
-	filterDomain := newDomainFilter(keyword)
-	filterBody := func(body string) string {
-		body = timestampRegex.ReplaceAllString(body, TimestampReplacmentMarker)
-		body = akamaiRegex.ReplaceAllString(body, AkamiIdReplacementMarker)
-		return filterDomain(body)
-	}
+	//filterDomain := newDomainFilter(keyword)
+	// filterBody := func(body string) string {
+	// 	body = timestampRegex.ReplaceAllString(body, TimestampReplacmentMarker)
+	// 	body = akamaiRegex.ReplaceAllString(body, AkamiIdReplacementMarker)
+	// 	return filterDomain(body)
+	// }
 
-	return filterBody(response.(string))
+	// temp func for debugging
+	filterBody := func(body interface{}) string {
+		return string(body.([]byte))
+	}
+	fmt.Println("Generate Template internal response is ", filterBody(response))
+	return filterBody(response)
 }
 
 //TODO: there are more efficient ways of doing this than going through the list twice, but this will do for now
@@ -139,7 +146,7 @@ func (q *QUICWorker) MatchesControl(results []*util.Result) []*util.Result {
 }
 
 // the send result func is definitely nessary 
-func (q *QUICWorker) SendResults(results []*util.Result, ResultsQueue chan<- *util.Result) {
+func (q *QUICWorker) SendResults(results []*util.Result	, ResultsQueue chan<- *util.Result) {
 	annotatedResults := q.MatchesControl(results)
 	for _, result := range annotatedResults {
 		ResultsQueue <- result
@@ -287,5 +294,6 @@ func (q *QUICWorker) Worker(workQueue <-chan interface{}, resultQueue chan<- *ut
 		q.SendResults(results, resultQueue)
 		wg.Done()
 	}
+	fmt.Println("QUICWorker exiting and sending done signal")
 	done <- true
 }

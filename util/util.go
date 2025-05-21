@@ -44,6 +44,7 @@ type Result struct {
 	EndTime               time.Time   `json:"EndTime"`
 }
 
+
 type TLSdata struct {
 	Version                    uint16
 	HandshakeComplete          bool
