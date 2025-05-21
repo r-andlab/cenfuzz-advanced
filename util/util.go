@@ -151,3 +151,4 @@ func ParseFuzzerInfile(path string) []*FuzzerInput {
 
 	return fuzzers
 }
+

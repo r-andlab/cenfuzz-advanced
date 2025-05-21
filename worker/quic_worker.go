@@ -53,15 +53,15 @@ func (f FuzzerSpec) QUICFuzzerInterface() quic_fuzzer.Fuzzer {
 	case 1:
 		return &quic_fuzzer.MutateConnIDLen{}
 	case 2:
-		return &quic_fuzzer.MutateConnIDLen{}
+		return &quic_fuzzer.DCIDMismatchCheck{}
 	case 3:
-		return &quic_fuzzer.MutateConnIDLen{}
+		return &quic_fuzzer.Inconsistent0RTTDetection{}
 	case 4:
-		return &quic_fuzzer.MutateConnIDLen{}
+		return &quic_fuzzer.RetryPacketPath{}
 	case 5:
-		return &quic_fuzzer.MutateConnIDLen{}
+		return &quic_fuzzer.HeaderAppendValidation{}
 	case 6:
-		return &quic_fuzzer.MutateConnIDLen{}
+		return &quic_fuzzer.LengthBasedFiltering{}
 	default:
 		panic("unknown fuzzer")
 	}
