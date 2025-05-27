@@ -182,7 +182,7 @@ func SendHTTPSRequest(conn *Connection, config utls.Config) *util.TLSdata {
 func SendECHRequest(conn *Connection, config utls.Config, spec utls.ClientHelloSpec, flag bool) *util.TLSdata {
 	defer conn.Raw.Close()
 	conn.Raw.SetReadDeadline(time.Now().Add(2 * time.Second))
-	tlsConn := utls.UClient(conn.Raw, &config, utls.HelloCustom)
+	tlsConn := utls.UClient(conn.Raw, &config, utls.HelloChrome_120)
 	if !flag {
 		tlsConn = utls.UClient(conn.Raw, &config, utls.HelloChrome_Auto)
 	}

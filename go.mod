@@ -6,7 +6,6 @@ toolchain go1.24.0
 
 require (
 	cloud.google.com/go/bigquery v1.42.0
-	github.com/OmarTariq612/goech v0.0.1
 	github.com/banviktor/asnlookup v0.1.0
 	github.com/google/go-cmp v0.6.0
 	github.com/jpillora/go-tld v1.2.1
@@ -14,7 +13,7 @@ require (
 	github.com/miekg/dns v1.1.66
 	github.com/mxschmitt/golang-combinations v1.1.0
 	github.com/oschwald/geoip2-golang v1.8.0
-	github.com/refraction-networking/utls v1.7.1
+	github.com/refraction-networking/utls v1.7.3
 )
 
 require (

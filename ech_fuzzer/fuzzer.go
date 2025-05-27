@@ -1,10 +1,8 @@
 package ech_fuzzer
 
 import (
-	"encoding/base64"
-	"log"
+	//"log"
 
-	goech "github.com/OmarTariq612/goech"
 	"github.com/censoredplanet/CenFuzz/connection"
 	cmp "github.com/google/go-cmp/cmp"
 	dns "github.com/miekg/dns"
@@ -33,11 +31,12 @@ func FetchECHConfig(domain string) []byte {
 	m.SetQuestion(dns.Fqdn(domain), dns.TypeHTTPS)
 
 	c := new(dns.Client)
-	in, _, err := c.Exchange(m, "8.8.8.8:53") // Using Google's public DNS
+	in, _, err := c.Exchange(m, "1.1.1.1:53")
 	if err != nil {
 		return nil
 	}
 
+	//Parse the answer to check if it's an HTTPS record and return the public key
 	for _, ans := range in.Answer {
 		if httpsRecord, ok := ans.(*dns.HTTPS); ok {
 			for _, kv := range httpsRecord.Value {
@@ -52,26 +51,6 @@ func FetchECHConfig(domain string) []byte {
 	}
 
 	return nil
-}
-
-func BuildECHExtension(b64ECHConfig string) utls.TLSExtension {
-	echConfigList, err := goech.ECHConfigListFromBase64(b64ECHConfig)
-	if err != nil {
-		log.Println("[ech_fuzzer.BuildECHExtension] Error parsing certificate")
-		return nil
-	}
-
-	pk, _ := echConfigList[0].PublicKey.MarshalBinary()
-	if err != nil {
-		log.Println("[ech_fuzzer.BuildECHExtension] Error marshalling binary")
-	}
-
-	echExt := &utls.GenericExtension{
-		Id:   0xfe0d,
-		Data: pk,
-	}
-
-	return echExt
 }
 
 func CreateECHConfig(requestWord RequestWord, echConfigListBytes []byte) *utls.Config {
@@ -94,13 +73,10 @@ func MakeConnection(target string, hostname string, requestWord RequestWord) (in
 	//Fetch the ECH Config (byte string)
 	echConfig := FetchECHConfig(requestWord.Servername)
 	if echConfig == nil {
-		//No ECH config -> Just send using
-		log.Printf("[ech_fuzzer.BuildECHExtension] Error fetching ECH Config for %s", requestWord.Servername)
+		//No ECH config -> Just send using Google parrot
+		//log.Printf("[ech_fuzzer.BuildECHExtension] Error fetching ECH Config for %s", requestWord.Servername)
 		flag = false
 	}
-
-	//Create ECH Extension (used in case there are multiple configs)
-	echExtension := BuildECHExtension(base64.StdEncoding.EncodeToString(echConfig))
 
 	//Create the config
 	config := CreateECHConfig(requestWord, echConfig)
@@ -115,9 +91,8 @@ func MakeConnection(target string, hostname string, requestWord RequestWord) (in
 			utls.TLS_CHACHA20_POLY1305_SHA256,
 		},
 		Extensions: []utls.TLSExtension{
-			echExtension,
-			&utls.SNIExtension{ServerName: "bruh.com"},
-			&utls.ALPNExtension{AlpnProtocols: []string{"h2", "http/1.1"}},
+			&utls.SNIExtension{ServerName: "cloudflare-ech.com"},
+			&utls.ALPNExtension{AlpnProtocols: []string{"h3", "h2", "http/1.1"}},
 		},
 	}
 
