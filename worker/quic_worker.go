@@ -12,6 +12,7 @@ import (
 
 	"github.com/censoredplanet/CenFuzz/util"
 	quic "github.com/r-andlab/quic-go/fuzzing/cenfuzz"
+
 )
 
 type QUICWorker struct{}
@@ -72,13 +73,6 @@ func (q *QUICWorker) GenerateTemplate(response interface{}, keyword string) inte
 	if response == nil {
 		return nil
 	}
-	//filterDomain := newDomainFilter(keyword)
-	// filterBody := func(body string) string {
-	// 	body = timestampRegex.ReplaceAllString(body, TimestampReplacmentMarker)
-	// 	body = akamaiRegex.ReplaceAllString(body, AkamiIdReplacementMarker)
-	// 	return filterDomain(body)
-	// }
-
 	// temp func for debugging
 	filterBody := func(body interface{}) string {
 		return string(body.([]byte))
@@ -89,59 +83,7 @@ func (q *QUICWorker) GenerateTemplate(response interface{}, keyword string) inte
 
 //TODO: there are more efficient ways of doing this than going through the list twice, but this will do for now
 func (q *QUICWorker) MatchesControl(results []*util.Result) []*util.Result {
-	var normalResponse interface{}
-	var normalError interface{}
 
-	for _, result := range results {
-		if result.IsNormal == true {
-			normalResponse = q.GenerateTemplate(result.Response, result.Domain)
-			normalError = result.Error
-		}
-	}
-	for _, result := range results {
-		normalDifferences := ""
-		uncensoredDifferences := ""
-		resultResponseTemplate := q.GenerateTemplate(result.Response, result.Domain)
-		uncensoredResponseTemplate := q.GenerateTemplate(result.UncensoredResponse, result.Domain)
-		if resultResponseTemplate == normalResponse && result.Error == normalError {
-			result.MatchesNormal = true
-		} else {
-			if resultResponseTemplate == nil && normalResponse != nil {
-				normalDifferences += "No expected response;"
-			}
-			if result.Error == nil && normalError != nil {
-				normalDifferences += "No expected error;"
-			}
-			if normalResponse != nil && (resultResponseTemplate != normalResponse) {
-				normalDifferences += "Different response;"
-			}
-			if normalError != nil && (result.Error != normalError) {
-				normalDifferences += "Different error;"
-			}
-			result.MatchesNormal = false
-			result.NormalDifferences = normalDifferences
-		}
-
-		if resultResponseTemplate == uncensoredResponseTemplate && result.Error == result.UncensoredError {
-			result.MatchesUncensored = true
-		} else {
-			if resultResponseTemplate == nil && uncensoredResponseTemplate != nil {
-				uncensoredDifferences += "No expected response;"
-			}
-			if result.Error == nil && result.UncensoredError != nil {
-				uncensoredDifferences += "No expected error;"
-			}
-			if uncensoredResponseTemplate != nil && (resultResponseTemplate != uncensoredResponseTemplate) {
-				uncensoredDifferences += "Different response;"
-			}
-			if result.UncensoredError != nil && (result.Error != result.UncensoredError) {
-				uncensoredDifferences += "Different error;"
-			}
-			result.MatchesUncensored = false
-			result.UncensoredDifferences = uncensoredDifferences
-		}
-
-	}
 	return results
 }
 
@@ -153,29 +95,6 @@ func (q *QUICWorker) SendResults(results []*util.Result	, ResultsQueue chan<- *u
 	}
 
 }
-
-// func (f FuzzerSpec) QUICFuzzerInterface() quic_fuzzer.Fuzzer {
-// 	switch f.Fuzzer() {
-// 	// Replace with actual QUIC fuzzers
-// 	case 1:
-// 		return &quic_fuzzer.InitialPacketMutation{}
-// 	case 2:
-// 		return &quic_fuzzer.QuicVersionSwap{}
-// 	default:
-// 		panic("unknown QUIC fuzzer")
-// 	}
-// }
-
-// func QUICFuzzerMapping(fuzzer int) string {
-// 	switch fuzzer {
-// 	case 1:
-// 		return "Initial Packet Mutation"
-// 	case 2:
-// 		return "QUIC Version Swap"
-// 	default:
-// 		return "NA"
-// 	}
-// }
 
 func (q *QUICWorker) Work(ip string, domain string, fuzzers interface{}) interface{} {
 	return &QUICWork{
@@ -221,10 +140,20 @@ func (q *QUICWorker) Worker(workQueue <-chan interface{}, resultQueue chan<- *ut
 		work := w.(*QUICWork)
 		var results []*util.Result
 
+		// func to generate normal packet
+		normal_packet, err := quic.GenerateValidQUICInitialPacket()
+		if err != nil {
+			fmt.Println("failed to generate normal QUIC packet:", err)
+			return
+		}
+
+
 		startTime := time.Now()
-		uncensoredResponse, uncensoredError := quic.SendInitialQUICPacket("google.com")
+		//uncensoredResponse, uncensoredError := quic.SendInitialQUICPacket("google.com")
+		uncensoredResponse, uncensoredError := quic.SendToServer(normal_packet ,"google.com")
 		time.Sleep(util.Sleep(uncensoredError))
-		censoredResponse, censoredError := quic.SendInitialQUICPacket("quic.nginx.org")
+		//censoredResponse, censoredError := quic.SendInitialQUICPacket("quic.nginx.org")
+		censoredResponse, censoredError := quic.SendToServer(normal_packet ,"quic.nginx.org")
 		time.Sleep(util.Sleep(censoredError))
 		endTime := time.Now()
 		fmt.Println("non fuzzed uncensoredResponse", uncensoredResponse)
@@ -235,9 +164,9 @@ func (q *QUICWorker) Worker(workQueue <-chan interface{}, resultQueue chan<- *ut
 			Domain:             work.Domain,
 			TestName:           "Normal",
 			IsNormal:           true,
-			Response:           censoredResponse,
+			Response:           []byte(censoredResponse),
 			Error:              censoredError,
-			UncensoredResponse: uncensoredResponse,
+			UncensoredResponse: []byte(uncensoredResponse),
 			UncensoredError:    uncensoredError,
 			StartTime:          startTime,
 			EndTime:            endTime,
@@ -254,18 +183,12 @@ func (q *QUICWorker) Worker(workQueue <-chan interface{}, resultQueue chan<- *ut
 			// dummy loop 
 			for _, requestWord := range []string{"quic.nginx.org"} {
 				// getting a random time seed for now later on will be able to set the fuzzing strategy 
-				rand.Seed(time.Now().UnixNano()) // seed RNG with current time
-
-				// Generate 32 random bytes (change size as needed)
-				data := make([]byte, 32)
-				for i := range data {
-					data[i] = byte(rand.Intn(256)) // random byte: 0–255
-				}
+				
 
 				startTime = time.Now()
-				uncensoredResponse, uncensoredErr := quic.Fuzz(data ,"google.com")
+				uncensoredResponse, uncensoredErr := quic.SendToServer(data ,"google.com")
 				time.Sleep(util.Sleep(uncensoredErr))
-				censoredResponse, censoredErr := quic.Fuzz(data ,requestWord) 
+				censoredResponse, censoredErr := quic.SendToServer(data ,requestWord) 
 				time.Sleep(util.Sleep(censoredErr))
 				endTime = time.Now()
 
@@ -278,10 +201,10 @@ func (q *QUICWorker) Worker(workQueue <-chan interface{}, resultQueue chan<- *ut
 					TestName:           fuzzerObject.TestName,
 					IsNormal:           false,
 					//Request:            censoredRequest,
-					Response:           censoredResponse,
+					Response:           []byte(censoredResponse),
 					Error:              censoredErr,
 					//UncensoredRequest:  uncensoredRequest,
-					UncensoredResponse: uncensoredResponse,
+					UncensoredResponse: []byte(uncensoredResponse),
 					UncensoredError:    uncensoredErr,
 					StartTime:          startTime,
 					EndTime:            endTime,

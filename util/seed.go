@@ -18,6 +18,14 @@ import (
 	combinations "github.com/mxschmitt/golang-combinations"
 )
 
+// func that I am adding for the random seeds and bytes
+// added helper function
+// func randomBytes(r *rand.Rand, n int) []byte {
+// 	b := make([]byte, n)
+// 	r.Read(b)
+// 	return b
+// }
+
 func init() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
