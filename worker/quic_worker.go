@@ -4,7 +4,7 @@ import (
 	//"bytes"
 	"fmt"
 	"log"
-	"math/rand"
+	//"math/rand"
 	"sync"
 	"time"
 
@@ -14,6 +14,8 @@ import (
 	quic "github.com/r-andlab/quic-go/fuzzing/cenfuzz"
 
 )
+
+// helper func moved here cause go
 
 type QUICWorker struct{}
 
@@ -110,7 +112,6 @@ func (q *QUICWorker) FuzzerObjects(fuzzerList []*util.FuzzerInput) interface{} {
 		// fmt.Println("fuzzerStruct",fuzzerStruct)
 		fuzzerspec := FuzzerSpec(fuzzerStruct.FuzzerNumber)
 		fuzzerName := QUICFuzzerMapping(fuzzerStruct.FuzzerNumber)
-		fmt.Println("fuzzerspec", fuzzerspec)
 		if fuzzerName == "NA" {
 			log.Println("[HTTPWorker.FuzzerObjects] WARNING: Fuzzer not available: ", fuzzerStruct.FuzzerNumber)
 			continue
@@ -181,14 +182,20 @@ func (q *QUICWorker) Worker(workQueue <-chan interface{}, resultQueue chan<- *ut
 		for _, fuzzerObject := range work.Fuzzers {
 			//for _, requestWord := range fuzzerObject.RequestWords {
 			// dummy loop 
-			for _, requestWord := range []string{"quic.nginx.org"} {
+			// checkign what the fuzzerObject is
+			for _, requestWord := range fuzzerObject.RequestWords {
 				// getting a random time seed for now later on will be able to set the fuzzing strategy 
-				
 
+				data, err := requestWord.ToBytes()
+				if err != nil {
+					fmt.Println("ToBytes failed:", err)
+					return // or handle it however you want
+				}
+				fmt.Println("data is = ", data)
 				startTime = time.Now()
-				uncensoredResponse, uncensoredErr := quic.SendToServer(data ,"google.com")
+				uncensoredResponse, uncensoredErr := quic.SendToServer(data,"google.com")
 				time.Sleep(util.Sleep(uncensoredErr))
-				censoredResponse, censoredErr := quic.SendToServer(data ,requestWord) 
+				censoredResponse, censoredErr := quic.SendToServer(data, "quic.nginx.org") 
 				time.Sleep(util.Sleep(censoredErr))
 				endTime = time.Now()
 
