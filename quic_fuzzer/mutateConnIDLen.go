@@ -11,6 +11,7 @@ import (
 	"github.com/censoredplanet/CenFuzz/config"
 	//"github.com/censoredplanet/CenFuzz/util"
 	quic "github.com/r-andlab/quic-go/fuzzing/cenfuzz"
+
 )
 
 type MutateConnIDLen struct{}
@@ -41,10 +42,10 @@ func (q *MutateConnIDLen) Init(all bool) []*RequestWord {
 				DCID:       dcid,
 				SCID:       scid,
 				Version:    1,     // use draft-29 or placeholder
-				PacketType: 0x1,   // Initial packet
+				PacketType: 0xC1,   // Initial packet
 				Token:      []byte{},
 				Length:     1200,  // typical initial UDP payload
-				Payload:    []byte{},
+				Payload: []byte{0x06, 0x00, 0x00, 0x00, 0x00},
 			}
 
 			requestWords = append(requestWords, requestWord)
