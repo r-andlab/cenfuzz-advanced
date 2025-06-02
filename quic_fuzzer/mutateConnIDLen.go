@@ -3,15 +3,19 @@ package quic_fuzzer
 import (
 	//"fmt"
 	"log"
-	"bytes"
-	"encoding/gob"
+	//"bytes"
+	//"encoding/gob"
+	"context"
 	"math/rand"
 	"time"
+	"net"
+	"crypto/tls"
 
-	"github.com/censoredplanet/CenFuzz/config"
+	//"github.com/censoredplanet/CenFuzz/config"
 	//"github.com/censoredplanet/CenFuzz/util"
-	quic "github.com/r-andlab/quic-go/fuzzing/cenfuzz"
+	// quic "github.com/r-andlab/quic-go/fuzzing/cenfuzz"
 
+	quic "github.com/quic-go/quic-go"
 )
 
 type MutateConnIDLen struct{}
@@ -19,73 +23,76 @@ type MutateConnIDLen struct{}
 var Rng = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 func (q *MutateConnIDLen) Init(all bool) []*RequestWord {
-	var requestWords []*RequestWord
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 
-	// Use local RNG, seeded by time
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	// Step 1: Set up intercepted UDP conn
+	udpConn, err := net.ListenPacket("udp", ":0")
+	if err != nil {
+		return nil, err
+	}
+	intercept := NewInterceptConn(udpConn)
 
-	if !all {
-		for i := 0; i < config.NumberOfProbesPerTest; i++ {
-			connIDLen := r.Intn(21) // Random length between 0 and 20
-
-			dcid := make([]byte, connIDLen)
-			scid := make([]byte, connIDLen)
-
-			_, err1 := r.Read(dcid)
-			_, err2 := r.Read(scid)
-			if err1 != nil || err2 != nil {
-				log.Printf("Failed to generate connection IDs: %v %v", err1, err2)
-				continue
-			}
-
-			requestWord := &RequestWord{
-				DCID:       dcid,
-				SCID:       scid,
-				Version:    1,     // use draft-29 or placeholder
-				PacketType: 0xC1,   // Initial packet
-				Token:      []byte{},
-				Length:     1200,  // typical initial UDP payload
-				Payload: []byte{0x06, 0x00, 0x00, 0x00, 0x00},
-			}
-
-			requestWords = append(requestWords, requestWord)
-
-			//fmt.Printf("Generated RequestWord %d: DCID len=%d, SCID len=%d\n", i, len(dcid), len(scid))
+	// Step 2: Start QUIC dial in background
+	go func() {
+		tlsConf := &tls.Config{
+			InsecureSkipVerify: true,
+			ServerName:         hostname,
+			NextProtos:         []string{"h3"},
 		}
-	} else {
-		for connIDLen := 0; connIDLen <= 20; connIDLen++ {
-			dcid := make([]byte, connIDLen)
-			scid := make([]byte, connIDLen)
+		quicConf := &quic.Config{
+			HandshakeIdleTimeout: 2 * time.Second,
+		}
+		addr := &net.UDPAddr{IP: net.ParseIP(serverIP), Port: 443}
+		_, _ = quic.Dial(context.Background(), intercept, addr, tlsConf, quicConf)
+	}()
 
-			r.Read(dcid)
-			r.Read(scid)
+	// Step 3: Wait briefly for packets to flow
+	time.Sleep(2 * time.Second)
+	captured := intercept.GetCaptured()
 
-			requestWord := &RequestWord{
-				DCID:       dcid,
-				SCID:       scid,
-				Version:    1,
-				PacketType: 0x1,
-				Token:      []byte{},
-				Length:     1200,
-				Payload:    []byte{},
-			}
-
-			requestWords = append(requestWords, requestWord)
-
-			//fmt.Printf("Generated (exhaustive) RequestWord: DCID len=%d, SCID len=%d\n", len(dcid), len(scid))
+	// Step 4: Locate the Initial packet
+	var initial []byte
+	for _, pkt := range captured {
+		if pkt.Direction == "send" && len(pkt.Bytes) > 5 && pkt.Bytes[0]&0x80 == 0x80 {
+			initial = pkt.Bytes
+			break
 		}
 	}
+	if initial == nil {
+		return nil, log.Output(1, "No Initial packet captured")
+	}
 
-	return requestWords
+	// Step 5: Mutate DCID/SCID lengths
+	dcidLen := rng.Intn(21)
+	scidLen := rng.Intn(21)
+	dcid := make([]byte, dcidLen)
+	scid := make([]byte, scidLen)
+	rng.Read(dcid)
+	rng.Read(scid)
+
+	mutated := make([]byte, len(initial))
+	copy(mutated, initial)
+
+	// Overwrite DCID/SCID fields in-place
+	offset := 5
+	if offset+1 > len(mutated) {
+		return nil, log.Output(1, "Packet too short for DCID length field")
+	}
+	mutated[offset] = byte(dcidLen)
+	offset++
+	copy(mutated[offset:], dcid)
+	offset += dcidLen
+	if offset+1 > len(mutated) {
+		return nil, log.Output(1, "Packet too short for SCID length field")
+	}
+	mutated[offset] = byte(scidLen)
+	offset++
+	copy(mutated[offset:], scid)
+
+	return mutated, nil
 }
 
+
 func (q *MutateConnIDLen) Fuzz(target string, hostname string, requestWord RequestWord) (interface{}, interface{}) {
-	var buf bytes.Buffer
-	enc := gob.NewEncoder(&buf)
-	err := enc.Encode(requestWord)
-	if err != nil {
-		log.Fatal(err)
-	}
-	data := buf.Bytes()
-	return quic.Fuzz(data, target)
+	return q.Init(target, hostname)
 }
