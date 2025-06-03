@@ -82,7 +82,7 @@ func CapitalizedPermutations(ip string, op string) []string {
 	return unique(s)
 }
 
-//TODO: This currently only works for ASCII characters
+// TODO: This currently only works for ASCII characters
 func GenerateAllCapitalizedPermutations(word string) []string {
 	return CapitalizedPermutations(word, "")
 }
@@ -341,7 +341,7 @@ func GenerateAllServerNameAlternatives() []string {
 	return GenerateAllAlternatives(servernames)
 }
 
-//https://azbigmedia.com/business/here-are-2021s-most-popular-tlds-and-domain-registration-trends/
+// https://azbigmedia.com/business/here-are-2021s-most-popular-tlds-and-domain-registration-trends/
 var TLDs = []string{"%s|tld|com", "%s|tld|xyz", "%s|tld|net", "%s|tld|club", "%s|tld|me", "%s|tld|org", "%s|tld|co", "%s|tld|shop", "%s|tld|info", "%s|tld|live"}
 
 func GenerateTLDAlternatives() string {
@@ -352,7 +352,7 @@ func GenerateAllTLDAlternatives() []string {
 	return GenerateAllAlternatives(TLDs)
 }
 
-//https://securitytrails.com/blog/most-popular-subdomains-mx-records#:~:text=As%20you%20can%20see%2C%20the,forums%2C%20wiki%2C%20community).
+// https://securitytrails.com/blog/most-popular-subdomains-mx-records#:~:text=As%20you%20can%20see%2C%20the,forums%2C%20wiki%2C%20community).
 var Subdomains = []string{"%s|subdomain|www", "%s|subdomain|mail", "%s|subdomain|forum", "%s|subdomain|m", "%s|subdomain|blog", "%s|subdomain|shop", "%s|subdomain|forums", "%s|subdomain|wiki", "%s|subdomain|community", "%s|subdomain|ww1"}
 
 func GenerateSubdomainsAlternatives() string {
@@ -371,4 +371,42 @@ func GenerateHostNameAlternatives() string {
 
 func GenerateAllHostNameAlternatives() []string {
 	return GenerateAllAlternatives(servernames)
+}
+
+func GenerateECHConfigRandomPadding() string {
+	prefixPaddingLength := rand.Intn(5)
+	suffixPaddingLength := rand.Intn(5)
+	echConfigWithPadding := strings.Repeat("*", prefixPaddingLength)
+	echConfigWithPadding += "%x"
+	echConfigWithPadding += strings.Repeat("*", suffixPaddingLength)
+	return echConfigWithPadding
+}
+func GenerateAllECHConfigPaddings() []string {
+	var echConfigWithAllPadding []string
+	for i := 0; i < 3; i++ {
+		for j := 0; j < 3; j++ {
+			echConfigWithPadding := strings.Repeat("*", i)
+			echConfigWithPadding += "%x"
+			echConfigWithPadding += strings.Repeat("*", j)
+			echConfigWithAllPadding = append(echConfigWithAllPadding, echConfigWithPadding)
+		}
+
+	}
+	return echConfigWithAllPadding
+}
+
+func GenerateFragSize() int {
+	flip := rand.Intn(2)
+	if flip == 0 {
+		return 64
+	}
+	return 128
+}
+
+func GenerateAllFragSizes() []int {
+	var randNums []int
+	randNums = append(randNums, 64)
+	randNums = append(randNums, 128)
+
+	return randNums
 }

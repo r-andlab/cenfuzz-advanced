@@ -179,22 +179,13 @@ func SendHTTPSRequest(conn *Connection, config utls.Config) *util.TLSdata {
 	return tlsData
 }
 
-func SendECHRequest(conn *Connection, config utls.Config, spec utls.ClientHelloSpec, flag bool) *util.TLSdata {
+func SendECHRequest(conn *Connection, config utls.Config) *util.TLSdata {
 	defer conn.Raw.Close()
 	conn.Raw.SetReadDeadline(time.Now().Add(2 * time.Second))
 	tlsConn := utls.UClient(conn.Raw, &config, utls.HelloChrome_120)
-	if !flag {
-		tlsConn = utls.UClient(conn.Raw, &config, utls.HelloChrome_Auto)
-	}
 	defer tlsConn.Close()
 
-	//Apply our own custom ClientHelloSpec
-	err := tlsConn.ApplyPreset(&spec)
-	if err != nil {
-		err = conn.handleError(err)
-		return nil
-	}
-	err = tlsConn.Handshake()
+	err := tlsConn.Handshake()
 	if err != nil {
 		err = conn.handleError(err)
 		return nil
@@ -218,6 +209,67 @@ func SendECHRequest(conn *Connection, config utls.Config, spec utls.ClientHelloS
 		err = conn.handleError(err)
 		return tlsData
 	}
+	maxResponseLength := 1 << 16
+	httpResponse := make([]byte, maxResponseLength)
+
+	responseLength := 0
+	for {
+		// TODO(adrs): add to config
+		tlsConn.SetReadDeadline(time.Now().Add(10 * time.Second))
+		n, err := tlsConn.Read(httpResponse[responseLength:maxResponseLength])
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			err = conn.handleError(err)
+			return tlsData
+		}
+		responseLength += n
+	}
+	tlsData.HTTPResponse = string(httpResponse[:responseLength])
+	return tlsData
+}
+
+func SendECHFrag(conn *Connection, config utls.Config, fragSize int) *util.TLSdata {
+	defer conn.Raw.Close()
+	conn.Raw.SetReadDeadline(time.Now().Add(2 * time.Second))
+	tlsConn := utls.UClient(conn.Raw, &config, utls.HelloChrome_120)
+	defer tlsConn.Close()
+
+	err := tlsConn.Handshake()
+	if err != nil {
+		err = conn.handleError(err)
+		return nil
+	}
+
+	state := tlsConn.ConnectionState()
+
+	tlsData := &util.TLSdata{
+		Version:                    state.Version,
+		HandshakeComplete:          state.HandshakeComplete,
+		CipherSuite:                state.CipherSuite,
+		NegotiatedProtocol:         state.NegotiatedProtocol,
+		NegotiatedProtocolIsMutual: state.NegotiatedProtocolIsMutual,
+		PeerCertificates:           state.PeerCertificates[0].Raw,
+		ServerName:                 state.ServerName,
+	}
+
+	getRequest := fmt.Sprintf("GET / HTTP/1.1\r\nHost:%s\r\nConnection: close\r\n\r\n", config.ServerName)
+	log.Printf("going into for loop; %d", fragSize)
+	for i := 0; i < len(getRequest); i += int(fragSize) {
+		end := i + fragSize
+		if end > len(getRequest) {
+			end = len(getRequest)
+		}
+
+		chunk := getRequest[i:end]
+		_, err := tlsConn.Write([]byte(chunk))
+		if err != nil {
+			err = conn.handleError(err)
+			return tlsData
+		}
+	}
+	log.Print("here sent full req")
+
 	maxResponseLength := 1 << 16
 	httpResponse := make([]byte, maxResponseLength)
 

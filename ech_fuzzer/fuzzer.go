@@ -1,7 +1,8 @@
 package ech_fuzzer
 
 import (
-	//"log"
+	"fmt"
+	"log"
 
 	"github.com/censoredplanet/CenFuzz/connection"
 	cmp "github.com/google/go-cmp/cmp"
@@ -15,6 +16,8 @@ type RequestWord struct {
 	MinVersion   uint16
 	MaxVersion   uint16
 	Certificate  []utls.Certificate
+	ECHConfig    []byte
+	FragSize     int
 }
 
 func containsRequestWord(s []*RequestWord, e *RequestWord) bool {
@@ -68,44 +71,66 @@ func CreateECHConfig(requestWord RequestWord, echConfigListBytes []byte) *utls.C
 }
 
 func MakeConnection(target string, hostname string, requestWord RequestWord) (interface{}, interface{}, interface{}) {
-	flag := true
-
 	//Fetch the ECH Config (byte string)
 	echConfig := FetchECHConfig(requestWord.Servername)
-	if echConfig == nil {
-		//No ECH config -> Just send using Google parrot
-		//log.Printf("[ech_fuzzer.BuildECHExtension] Error fetching ECH Config for %s", requestWord.Servername)
-		flag = false
+	if requestWord.ECHConfig != nil { //requestWord ECHConfig was fuzzed/has padding
+		echConfig = []byte(fmt.Sprintf(string(requestWord.ECHConfig), echConfig))
+		log.Printf("%x", echConfig)
 	}
 
 	//Create the config
 	config := CreateECHConfig(requestWord, echConfig)
 
-	//Apply Custom ClientHello Spec to the config
-	spec := &utls.ClientHelloSpec{
-		TLSVersMin: utls.VersionTLS13,
-		TLSVersMax: utls.VersionTLS13,
-		CipherSuites: []uint16{
-			utls.TLS_AES_128_GCM_SHA256,
-			utls.TLS_AES_256_GCM_SHA384,
-			utls.TLS_CHACHA20_POLY1305_SHA256,
-		},
-		Extensions: []utls.TLSExtension{
-			&utls.SNIExtension{ServerName: "cloudflare-ech.com"},
-			&utls.ALPNExtension{AlpnProtocols: []string{"h3", "h2", "http/1.1"}},
-		},
+	//Recreate updated requestword
+	request := &RequestWord{
+		Servername:   config.ServerName,
+		CipherSuites: config.CipherSuites,
+		MinVersion:   config.MinVersion,
+		MaxVersion:   config.MaxVersion,
+		Certificate:  config.Certificates,
+		ECHConfig:    config.EncryptedClientHelloConfigList,
+		FragSize:     0,
 	}
 
 	conn := connection.NewConnection(target, 443)
 	if conn == nil {
-		return requestWord, nil, "Dial"
+		return request, nil, "Dial"
 	}
 
-	response := connection.SendECHRequest(conn, *config, *spec, flag)
+	response := connection.SendECHRequest(conn, *config)
 	if conn.Err != nil {
-		return requestWord, nil, conn.Err.Error()
+		return request, nil, conn.Err.Error()
 	}
-	return requestWord, response, nil
+	return request, response, nil
+}
+
+func MakeConnectionFrag(target string, hostname string, requestWord RequestWord) (interface{}, interface{}, interface{}) {
+	//Fetch the ECH Config (byte string)
+	echConfig := FetchECHConfig(requestWord.Servername)
+
+	//Create the config
+	config := CreateECHConfig(requestWord, echConfig)
+
+	//Recreate updated requestword
+	request := &RequestWord{
+		Servername:   config.ServerName,
+		CipherSuites: config.CipherSuites,
+		MinVersion:   config.MinVersion,
+		MaxVersion:   config.MaxVersion,
+		Certificate:  config.Certificates,
+		ECHConfig:    config.EncryptedClientHelloConfigList,
+	}
+
+	conn := connection.NewConnection(target, 443)
+	if conn == nil {
+		return request, nil, "Dial"
+	}
+
+	response := connection.SendECHFrag(conn, *config, requestWord.FragSize)
+	if conn.Err != nil {
+		return request, nil, conn.Err.Error()
+	}
+	return request, response, nil
 }
 
 type Fuzzer interface {

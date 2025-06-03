@@ -17,7 +17,11 @@ func ECHFuzzerMapping(fuzzer int) string {
 	switch fuzzer {
 	case 1:
 		return "SNI Padding"
-	case 6:
+	case 2:
+		return "ECH Config Padding"
+	case 3:
+		return "Send Fragmented"
+	case 4:
 		return "SNI Alternate"
 	default:
 		return "NA"
@@ -28,7 +32,11 @@ func (f FuzzerSpec) ECHFuzzerInterface() ech_fuzzer.Fuzzer {
 	switch f.Fuzzer() {
 	case 1:
 		return &ech_fuzzer.ServernamePadding{}
-	case 6:
+	case 2:
+		return &ech_fuzzer.ECHConfigPadding{}
+	case 3:
+		return &ech_fuzzer.SendFragmented{}
+	case 4:
 		return &ech_fuzzer.ServernameAlternate{}
 	default:
 		panic("unknown fuzzer")
@@ -254,6 +262,7 @@ func (h *ECHWorker) Worker(workQueue <-chan interface{}, resultQueue chan<- *uti
 					MaxVersion:   requestWord.MaxVersion,
 					CipherSuites: requestWord.CipherSuites,
 					Certificate:  requestWord.Certificate,
+					ECHConfig:    requestWord.ECHConfig,
 				})
 				time.Sleep(util.Sleep(uncensoredErr))
 				formattedCensoredDomain := fmt.Sprintf(censoredRequestWord, work.Domain)
@@ -263,6 +272,7 @@ func (h *ECHWorker) Worker(workQueue <-chan interface{}, resultQueue chan<- *uti
 					MaxVersion:   requestWord.MaxVersion,
 					CipherSuites: requestWord.CipherSuites,
 					Certificate:  requestWord.Certificate,
+					ECHConfig:    requestWord.ECHConfig,
 				})
 				time.Sleep(util.Sleep(censoredErr))
 				endTime = time.Now()
